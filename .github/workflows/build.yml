@@ -65,25 +65,26 @@ jobs:
           cp -R "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_mac/
           cp install.sh dist_mac/
           chmod +x dist_mac/install.sh
-          cat > dist_mac/CITESTE-MA.txt << 'EOF'
-GDC Resolve Encoder — instalare pe Mac
-=======================================
 
-CEL MAI SIMPLU: deschide Terminal in acest folder si ruleaza:
-
-    ./install.sh
-
-Scriptul verifica FFmpeg (il instaleaza prin Homebrew daca lipseste),
-elimina carantina macOS, si copiaza pluginul la locul corect. Iti va
-cere parola (sudo) o singura data, ca sa scrie in folderul de sistem.
-
-Dupa instalare, restart la DaVinci Resolve.
-
-------------------------------------------------------------------
-Manual, daca preferi:
-    xattr -rd com.apple.quarantine gdc_resolve_encoder.dvcp.bundle
-    mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/"
-EOF
+          printf '%s\n' \
+            'GDC Resolve Encoder - instalare pe Mac' \
+            '=======================================' \
+            '' \
+            'CEL MAI SIMPLU: deschide Terminal in acest folder si ruleaza:' \
+            '' \
+            '    ./install.sh' \
+            '' \
+            'Scriptul verifica FFmpeg (il instaleaza prin Homebrew daca lipseste),' \
+            'elimina carantina macOS, si copiaza pluginul la locul corect. Iti va' \
+            'cere parola (sudo) o singura data, ca sa scrie in folderul de sistem.' \
+            '' \
+            'Dupa instalare, restart la DaVinci Resolve.' \
+            '' \
+            '------------------------------------------------------------------' \
+            'Manual, daca preferi:' \
+            '    xattr -rd com.apple.quarantine gdc_resolve_encoder.dvcp.bundle' \
+            '    mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/"' \
+            > dist_mac/CITESTE-MA.txt
 
           mkdir -p dist
           cd dist_mac
