@@ -170,6 +170,13 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         uint32_t colorModelVal = clrYUVp;
         codecInfo.SetProperty(pIOPropColorModel, propTypeUInt32, &colorModelVal, 1);
 
+        // Missing in earlier versions of this plugin — Resolve appears to
+        // need this to construct a video track at all; without it, render
+        // fails immediately with "Failed to add video track" before any of
+        // this plugin's own code (DoInit/DoOpen) ever runs.
+        std::vector<uint8_t> dataRangeVec = { 0, 1 }; // 0=video range (default), 1=full range also offered
+        codecInfo.SetProperty(pIOPropDataRange, propTypeUInt8, dataRangeVec.data(), static_cast<int>(dataRangeVec.size()));
+
         uint8_t hSampling = 2, vSampling = 2; // 4:2:0
         codecInfo.SetProperty(pIOPropHSubsampling, propTypeUInt8, &hSampling, 1);
         codecInfo.SetProperty(pIOPropVSubsampling, propTypeUInt8, &vSampling, 1);
@@ -178,10 +185,18 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         codecInfo.SetProperty(pIOPropBitDepth, propTypeUInt32, &bitDepthVal, 1);
         codecInfo.SetProperty(pIOPropBitsPerSample, propTypeUInt32, &bitDepthVal, 1);
 
-        const uint32_t temporalReorder = 2; // allow B-frames
+        // 0 here at registration time (the static capability declaration);
+        // DoOpen() sets this to 2 later, on the per-instance buffer, once a
+        // track is actually being encoded. Matches the SDK's own reference
+        // x264 example, which uses the same two different values.
+        const uint32_t temporalReorder = 0;
         codecInfo.SetProperty(pIOPropTemporalReordering, propTypeUInt32, &temporalReorder, 1);
 
-        const uint8_t fieldSupport = fieldProgressive;
+        // Advertise support for progressive AND interlaced (top/bottom
+        // field first) — a narrower declaration here risks Resolve
+        // rejecting track creation for any timeline it doesn't consider an
+        // exact match.
+        const uint8_t fieldSupport = (fieldProgressive | fieldTop | fieldBottom);
         codecInfo.SetProperty(pIOPropFieldOrder, propTypeUInt8, &fieldSupport, 1);
 
         std::vector<std::string> containerVec = { "mp4", "mov" };
