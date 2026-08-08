@@ -61,7 +61,7 @@ jobs:
           mkdir -p "$BUNDLE"
           cp build/${{ env.PLUGIN_NAME }}.dvcp "$BUNDLE/"
           mkdir -p dist
-          ditto -c -k --sequesterRsrc "${{ env.PLUGIN_NAME }}.dvcp.bundle" "dist/gdc-resolve-encoder-mac-arm64.zip"
+          zip -r "dist/gdc-resolve-encoder-mac-arm64.zip" "${{ env.PLUGIN_NAME }}.dvcp.bundle"
 
       - uses: actions/upload-artifact@v4
         with:
