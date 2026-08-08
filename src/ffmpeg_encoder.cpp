@@ -657,7 +657,15 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         if (!cookie.empty())
         {
             p_pBuff->SetProperty(pIOPropMagicCookie, propTypeUInt8, cookie.data(), static_cast<int>(cookie.size()));
-            uint32_t cookieType = 0; // 0 = ISO/IEC 14496-15 avcC/hvcC config record
+            // Must be the box FourCC identifying the cookie's format (per
+            // IOPluginProps.h: "uint32_t fourCC ('avcC', 'esds', 'anxb'
+            // etc)") — NOT an arbitrary integer. Earlier versions of this
+            // plugin set this to 0, a meaningless value Resolve had no way
+            // to interpret; this was very likely why track creation kept
+            // failing immediately after a fully successful DoOpen.
+            uint32_t cookieType = m_pVariant->isHEVC
+                ? GDC_FOURCC('h', 'v', 'c', 'C')
+                : GDC_FOURCC('a', 'v', 'c', 'C');
             p_pBuff->SetProperty(pIOPropMagicCookieType, propTypeUInt32, &cookieType, 1);
             g_Log(logLevelInfo, "GDC Encoder :: Built %s config record, %d bytes",
                   m_pVariant->isHEVC ? "hvcC" : "avcC", static_cast<int>(cookie.size()));
