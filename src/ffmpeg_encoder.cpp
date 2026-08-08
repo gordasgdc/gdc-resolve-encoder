@@ -592,6 +592,8 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     m_pCtx->height = m_CommonProps.GetHeight();
     m_pCtx->time_base = AVRational{ static_cast<int>(m_CommonProps.GetFrameRateDen()), static_cast<int>(m_CommonProps.GetFrameRateNum()) };
     m_pCtx->framerate = AVRational{ static_cast<int>(m_CommonProps.GetFrameRateNum()), static_cast<int>(m_CommonProps.GetFrameRateDen()) };
+    g_Log(logLevelInfo, "GDC Encoder :: width=%d height=%d frDen=%d frNum=%d",
+          m_pCtx->width, m_pCtx->height, static_cast<int>(m_CommonProps.GetFrameRateDen()), static_cast<int>(m_CommonProps.GetFrameRateNum()));
     m_pCtx->gop_size = 12;
     m_pCtx->max_b_frames = 2;
     m_pCtx->pix_fmt = m_pVariant->preferredPixFmt;
@@ -673,6 +675,7 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     m_pFrame->height = m_pCtx->height;
     if (av_frame_get_buffer(m_pFrame, 32) < 0)
     {
+        g_Log(logLevelError, "GDC Encoder :: av_frame_get_buffer FAILED (width=%d height=%d)", m_pCtx->width, m_pCtx->height);
         return errAlloc;
     }
 
@@ -681,6 +684,7 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     uint32_t temporalVal = 2;
     p_pBuff->SetProperty(pIOPropTemporalReordering, propTypeUInt32, &temporalVal, 1);
 
+    g_Log(logLevelInfo, "GDC Encoder :: OpenCodec finished successfully, returning errNone");
     return errNone;
 }
 
