@@ -109,6 +109,7 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_HeaderSent(false)
     , m_Error(errNone)
 {
+    g_Log(logLevelInfo, "GDC Encoder :: FFmpegEncoder() constructed (variant='%s')", p_pVariant ? p_pVariant->displayName : "NULL");
 }
 
 FFmpegEncoder::~FFmpegEncoder()
@@ -138,11 +139,14 @@ bool FFmpegEncoder::s_IsVariantAvailable(const EncoderVariant* p_pVariant)
 
 StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
 {
+    g_Log(logLevelInfo, "GDC Encoder :: s_RegisterCodecs called (%d variants defined)", g_NumEncoderVariants);
+
     for (int i = 0; i < g_NumEncoderVariants; ++i)
     {
         const EncoderVariant& v = g_EncoderVariants[i];
         if (!s_IsVariantAvailable(&v))
         {
+            g_Log(logLevelInfo, "GDC Encoder :: '%s' unavailable, skipping", v.avCodecName);
             // e.g. h264_videotoolbox on non-Mac builds, or *_nvenc without
             // an NVIDIA GPU/driver — silently skip, don't fail the plugin.
             continue;
@@ -151,6 +155,7 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         HostPropertyCollectionRef codecInfo;
         if (!codecInfo.IsValid())
         {
+            g_Log(logLevelError, "GDC Encoder :: codecInfo.IsValid() FAILED for '%s'", v.avCodecName);
             return errAlloc;
         }
 
@@ -199,7 +204,16 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         const uint8_t fieldSupport = (fieldProgressive | fieldTop | fieldBottom);
         codecInfo.SetProperty(pIOPropFieldOrder, propTypeUInt8, &fieldSupport, 1);
 
-        const uint8_t threadSafe = 1;
+        // Declared as 1 (thread-safe) in an earlier version, copied from
+        // the reference without verifying this implementation actually
+        // supports it. It doesn't: one shared AVCodecContext/AVFrame/
+        // AVPacket per instance, no locking. If Resolve trusts the false
+        // "thread safe" declaration and dispatches DoProcess concurrently
+        // from its multiple worker threads onto the same encoder instance,
+        // that's a data race — and matches the observed symptom exactly
+        // (render succeeds sometimes, fails "Cannot add video track"
+        // other times, same file, same settings, on retry).
+        const uint8_t threadSafe = 0;
         codecInfo.SetProperty(pIOPropThreadSafe, propTypeUInt8, &threadSafe, 1);
 
         const uint8_t hwAcc = v.isHardware ? 1 : 0;
@@ -216,10 +230,13 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
 
         if (!p_pList->Append(&codecInfo))
         {
+            g_Log(logLevelError, "GDC Encoder :: list->Append() FAILED for '%s'", v.displayName);
             return errFail;
         }
+        g_Log(logLevelInfo, "GDC Encoder :: Registered '%s'", v.displayName);
     }
 
+    g_Log(logLevelInfo, "GDC Encoder :: s_RegisterCodecs finished successfully");
     return errNone;
 }
 
@@ -297,6 +314,7 @@ void FFmpegEncoder::DoFlush()
 
 StatusCode FFmpegEncoder::DoInit(HostPropertyCollectionRef* p_pProps)
 {
+    g_Log(logLevelInfo, "GDC Encoder :: DoInit called (variant='%s')", m_pVariant ? m_pVariant->displayName : "NULL");
     // The proven-working ffmpeg_encoder_plugin reference does nothing here
     // — it relies entirely on the colorModel/hSubsampling/vSubsampling
     // already declared in s_RegisterCodecs, rather than re-declaring them
@@ -310,6 +328,7 @@ StatusCode FFmpegEncoder::DoInit(HostPropertyCollectionRef* p_pProps)
 
 StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
 {
+    g_Log(logLevelInfo, "GDC Encoder :: DoOpen called (variant='%s')", m_pVariant ? m_pVariant->displayName : "NULL");
     m_CommonProps.Load(p_pBuff);
 
     p_pBuff->GetINT32("gdc_quality_mode", m_QualityMode);
