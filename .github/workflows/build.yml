@@ -1,0 +1,127 @@
+name: Build GDC Resolve Encoder
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch: {}
+
+env:
+  PLUGIN_NAME: gdc_resolve_encoder
+
+jobs:
+  # ───────────────────────────────────────────────────────────── Linux ──
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake pkg-config libavcodec-dev libavutil-dev libswscale-dev
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Package (Linux-only bundle)
+        run: |
+          BUNDLE="${{ env.PLUGIN_NAME }}.dvcp.bundle/Contents/Linux-x86-64"
+          mkdir -p "$BUNDLE"
+          cp build/${{ env.PLUGIN_NAME }}.dvcp "$BUNDLE/"
+          mkdir -p dist
+          zip -r "dist/gdc-resolve-encoder-linux-x64.zip" "${{ env.PLUGIN_NAME }}.dvcp.bundle"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gdc-resolve-encoder-linux-x64
+          path: dist/gdc-resolve-encoder-linux-x64.zip
+
+  # ───────────────────────────────────────────────────────── macOS (arm64) ──
+  build-macos:
+    runs-on: macos-14 # Apple Silicon runner
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps (Homebrew)
+        run: |
+          brew install cmake pkg-config ffmpeg
+
+      - name: Configure
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Package (macOS arm64-only bundle)
+        run: |
+          BUNDLE="${{ env.PLUGIN_NAME }}.dvcp.bundle/Contents/MacOS"
+          mkdir -p "$BUNDLE"
+          cp build/${{ env.PLUGIN_NAME }}.dvcp "$BUNDLE/"
+          mkdir -p dist
+          ditto -c -k --sequesterRsrc "${{ env.PLUGIN_NAME }}.dvcp.bundle" "dist/gdc-resolve-encoder-mac-arm64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gdc-resolve-encoder-mac-arm64
+          path: dist/gdc-resolve-encoder-mac-arm64.zip
+
+  # ───────────────────────────────────────────────────────────── Windows ──
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download FFmpeg shared dev build
+        shell: pwsh
+        run: |
+          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg.7z
+          7z x ffmpeg.7z -offmpeg_extracted
+          $dir = Get-ChildItem ffmpeg_extracted | Select-Object -First 1
+          Rename-Item $dir.FullName -NewName ffmpeg
+
+      - name: Configure
+        run: |
+          cmake -B build -DCMAKE_BUILD_TYPE=Release -DFFMPEG_ROOT="${{ github.workspace }}\ffmpeg"
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Package (Windows-only bundle)
+        shell: pwsh
+        run: |
+          $bundle = "${{ env.PLUGIN_NAME }}.dvcp.bundle\Contents\Win64"
+          New-Item -ItemType Directory -Force -Path $bundle
+          Copy-Item "build\Release\${{ env.PLUGIN_NAME }}.dvcp" $bundle
+          Copy-Item "ffmpeg\bin\avcodec-*.dll" $bundle
+          Copy-Item "ffmpeg\bin\avutil-*.dll" $bundle
+          Copy-Item "ffmpeg\bin\swscale-*.dll" $bundle
+          Copy-Item "ffmpeg\bin\swresample-*.dll" $bundle
+          New-Item -ItemType Directory -Force -Path dist
+          Compress-Archive -Path "${{ env.PLUGIN_NAME }}.dvcp.bundle" -DestinationPath "dist\gdc-resolve-encoder-windows-x64.zip"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gdc-resolve-encoder-windows-x64
+          path: dist/gdc-resolve-encoder-windows-x64.zip
+
+  # ──────────────────────────────────────────────────── GitHub Release ──
+  release:
+    needs: [build-linux, build-macos, build-windows]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            artifacts/gdc-resolve-encoder-mac-arm64/gdc-resolve-encoder-mac-arm64.zip
+            artifacts/gdc-resolve-encoder-windows-x64/gdc-resolve-encoder-windows-x64.zip
+            artifacts/gdc-resolve-encoder-linux-x64/gdc-resolve-encoder-linux-x64.zip
