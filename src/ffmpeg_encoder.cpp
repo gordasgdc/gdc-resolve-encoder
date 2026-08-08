@@ -167,7 +167,7 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         uint32_t dirVal = dirEncode;
         codecInfo.SetProperty(pIOPropCodecDirection, propTypeUInt32, &dirVal, 1);
 
-        uint32_t colorModelVal = clrUYVY;
+        uint32_t colorModelVal = clrYUVp;
         codecInfo.SetProperty(pIOPropColorModel, propTypeUInt32, &colorModelVal, 1);
 
         // Missing in earlier versions of this plugin — Resolve appears to
@@ -177,7 +177,7 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         std::vector<uint8_t> dataRangeVec = { 0, 1 }; // 0=video range (default), 1=full range also offered
         codecInfo.SetProperty(pIOPropDataRange, propTypeUInt8, dataRangeVec.data(), static_cast<int>(dataRangeVec.size()));
 
-        uint8_t hSampling = 2, vSampling = 1; // 4:2:2, matching clrUYVY exactly
+        uint8_t hSampling = 2, vSampling = 2; // 4:2:0, confirmed proven working
         codecInfo.SetProperty(pIOPropHSubsampling, propTypeUInt8, &hSampling, 1);
         codecInfo.SetProperty(pIOPropVSubsampling, propTypeUInt8, &vSampling, 1);
 
@@ -199,7 +199,13 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         const uint8_t fieldSupport = (fieldProgressive | fieldTop | fieldBottom);
         codecInfo.SetProperty(pIOPropFieldOrder, propTypeUInt8, &fieldSupport, 1);
 
-        std::vector<std::string> containerVec = { "mp4", "mov" };
+        const uint8_t threadSafe = 1;
+        codecInfo.SetProperty(pIOPropThreadSafe, propTypeUInt8, &threadSafe, 1);
+
+        const uint8_t hwAcc = v.isHardware ? 1 : 0;
+        codecInfo.SetProperty(pIOPropHWAcc, propTypeUInt8, &hwAcc, 1);
+
+        std::vector<std::string> containerVec = { "mov", "mp4", "mkv" };
         std::string valStrings;
         for (size_t c = 0; c < containerVec.size(); ++c)
         {
@@ -291,17 +297,14 @@ void FFmpegEncoder::DoFlush()
 
 StatusCode FFmpegEncoder::DoInit(HostPropertyCollectionRef* p_pProps)
 {
-    // Matches the SDK's own proven-working x264 reference exactly: clrUYVY
-    // (interleaved 4:2:2), not clrYUVp/420 — after ruling out every other
-    // registration difference, this was the last remaining structural gap
-    // between this plugin and the only combination known to actually work.
-    uint32_t colorModelVal = clrUYVY;
-    p_pProps->SetProperty(pIOPropColorModel, propTypeUInt32, &colorModelVal, 1);
-
-    uint8_t hSampling = 2, vSampling = 1;
-    p_pProps->SetProperty(pIOPropHSubsampling, propTypeUInt8, &hSampling, 1);
-    p_pProps->SetProperty(pIOPropVSubsampling, propTypeUInt8, &vSampling, 1);
-
+    // The proven-working ffmpeg_encoder_plugin reference does nothing here
+    // — it relies entirely on the colorModel/hSubsampling/vSubsampling
+    // already declared in s_RegisterCodecs, rather than re-declaring them
+    // per-instance. Setting them again here (as earlier versions of this
+    // plugin did) likely conflicted with that negotiation and is the actual
+    // cause of "Failed to add video track" happening before any of this
+    // plugin's own encoding code ever ran.
+    (void)p_pProps;
     return errNone;
 }
 
@@ -433,29 +436,41 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     uint32_t width = m_pCtx->width;
     uint32_t height = m_pCtx->height;
 
-    // Resolve delivers a single interleaved UYVY 4:2:2 buffer (2 bytes/px:
-    // U0 Y0 V0 Y1 ...), matching the pIOPropColorModel=clrUYVY this plugin
-    // requests in DoInit(). swscale understands this layout natively, so no
-    // manual byte-shuffling is needed — just point it at the one plane and
-    // let it convert straight to whatever pixel format the target encoder
-    // actually wants (YUV420P for libx264/libx265, NV12 for hardware).
+    // Resolve delivers planar YUV 4:2:0 (Y plane, then U plane, then V
+    // plane, tightly packed) matching pIOPropColorModel=clrYUVp + 2/2
+    // subsampling declared in s_RegisterCodecs. When the target encoder
+    // wants exactly this layout (AV_PIX_FMT_YUV420P — true for libx264),
+    // no conversion is needed at all. Only hardware encoders that want a
+    // different layout (e.g. NV12) go through swscale.
     const uint8_t* pSrcData[4] = {};
     int srcLinesize[4] = {};
     pSrcData[0] = reinterpret_cast<const uint8_t*>(pBuf);
-    srcLinesize[0] = static_cast<int>(width) * 2; // 2 bytes per pixel, interleaved
+    srcLinesize[0] = static_cast<int>(width);
+    pSrcData[1] = pSrcData[0] + (width * height);
+    srcLinesize[1] = static_cast<int>(width) / 2;
+    pSrcData[2] = pSrcData[1] + ((width / 2) * (height / 2));
+    srcLinesize[2] = static_cast<int>(width) / 2;
 
-    if (!m_pSwsCtx)
+    if (static_cast<AVPixelFormat>(p_pFrame->format) == AV_PIX_FMT_YUV420P)
     {
-        m_pSwsCtx = sws_getContext(width, height, AV_PIX_FMT_UYVY422,
-                                    width, height, static_cast<AVPixelFormat>(p_pFrame->format),
-                                    SWS_BILINEAR, nullptr, nullptr, nullptr);
+        av_image_copy(p_pFrame->data, p_pFrame->linesize, pSrcData, srcLinesize, AV_PIX_FMT_YUV420P,
+                       static_cast<int>(width), static_cast<int>(height));
     }
-    if (!m_pSwsCtx)
+    else
     {
-        p_pBuff->UnlockBuffer();
-        return errFail;
+        if (!m_pSwsCtx)
+        {
+            m_pSwsCtx = sws_getContext(width, height, AV_PIX_FMT_YUV420P,
+                                        width, height, static_cast<AVPixelFormat>(p_pFrame->format),
+                                        SWS_BILINEAR, nullptr, nullptr, nullptr);
+        }
+        if (!m_pSwsCtx)
+        {
+            p_pBuff->UnlockBuffer();
+            return errFail;
+        }
+        sws_scale(m_pSwsCtx, pSrcData, srcLinesize, 0, height, p_pFrame->data, p_pFrame->linesize);
     }
-    sws_scale(m_pSwsCtx, pSrcData, srcLinesize, 0, height, p_pFrame->data, p_pFrame->linesize);
 
     p_pBuff->UnlockBuffer();
 
