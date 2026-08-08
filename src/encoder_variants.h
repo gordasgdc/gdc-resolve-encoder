@@ -2,6 +2,10 @@
 
 #include <cstdint>
 
+extern "C" {
+#include <libavutil/pixfmt.h>
+}
+
 // Explicit, compiler-portable FourCC construction — a bare 'avc1' style
 // multi-character constant is technically compiler-defined behavior and
 // MSVC can evaluate it differently than GCC/Clang, which would silently
@@ -30,6 +34,9 @@ struct EncoderVariant
     unsigned int fourCC;       // GDC_FOURCC('a','v','c','1') (H.264) or GDC_FOURCC('h','v','c','1') (H.265)
     bool isHEVC;
     bool isHardware;
+    AVPixelFormat preferredPixFmt; // set explicitly rather than queried from
+                                    // AVCodec::pix_fmts, which newer FFmpeg
+                                    // versions have removed from the struct
 };
 
 // NOTE: these UUIDs are unique to GDC Resolve Encoder. If you fork this
@@ -38,27 +45,27 @@ struct EncoderVariant
 static const EncoderVariant g_EncoderVariants[] = {
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x01 },
-        "libx264", "GDC H.264 (Software x264)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, false,
+        "libx264", "GDC H.264 (Software x264)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, false, AV_PIX_FMT_YUV420P,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x02 },
-        "libx265", "GDC H.265 (Software x265)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, false,
+        "libx265", "GDC H.265 (Software x265)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, false, AV_PIX_FMT_YUV420P,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x03 },
-        "h264_videotoolbox", "GDC H.264 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true,
+        "h264_videotoolbox", "GDC H.264 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true, AV_PIX_FMT_NV12,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x04 },
-        "hevc_videotoolbox", "GDC H.265 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true,
+        "hevc_videotoolbox", "GDC H.265 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true, AV_PIX_FMT_NV12,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x05 },
-        "h264_nvenc", "GDC H.264 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true,
+        "h264_nvenc", "GDC H.264 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true, AV_PIX_FMT_YUV420P,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x06 },
-        "hevc_nvenc", "GDC H.265 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true,
+        "hevc_nvenc", "GDC H.265 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true, AV_PIX_FMT_YUV420P,
     },
 };
 

@@ -319,7 +319,7 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     m_pCtx->framerate = AVRational{ static_cast<int>(m_CommonProps.GetFrameRateNum()), static_cast<int>(m_CommonProps.GetFrameRateDen()) };
     m_pCtx->gop_size = 12;
     m_pCtx->max_b_frames = 2;
-    m_pCtx->pix_fmt = pCodec->pix_fmts ? pCodec->pix_fmts[0] : AV_PIX_FMT_YUV420P;
+    m_pCtx->pix_fmt = m_pVariant->preferredPixFmt;
     m_pCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     m_pCtx->color_range = m_CommonProps.IsFullRange() ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
 
