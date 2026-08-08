@@ -80,7 +80,8 @@ jobs:
           Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg.7z
           7z x ffmpeg.7z -offmpeg_extracted
           $dir = Get-ChildItem ffmpeg_extracted | Select-Object -First 1
-          Rename-Item $dir.FullName -NewName ffmpeg
+          Move-Item $dir.FullName -Destination "${{ github.workspace }}\ffmpeg"
+          Get-ChildItem "${{ github.workspace }}\ffmpeg\include\libavcodec" | Select-Object -First 5
 
       - name: Configure
         run: |
