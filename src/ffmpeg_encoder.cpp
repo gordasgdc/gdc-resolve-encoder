@@ -458,6 +458,14 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
 
     m_pPacket = av_packet_alloc();
 
+    // Found by direct line-by-line comparison against the official
+    // reference's DoOpen — it always sets this explicitly (0 for single
+    // pass), even though the property doc says "absent" should also mean
+    // single-pass. Matching the reference exactly since I've been wrong
+    // about "should be equivalent" assumptions before in this exact spot.
+    uint8_t isMultiPass = 0;
+    p_pBuff->SetProperty(pIOPropMultiPass, propTypeUInt8, &isMultiPass, 1);
+
     uint32_t temporalVal = 2;
     p_pBuff->SetProperty(pIOPropTemporalReordering, propTypeUInt32, &temporalVal, 1);
 
