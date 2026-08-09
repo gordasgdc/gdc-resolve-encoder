@@ -136,9 +136,39 @@ jobs:
           name: gdc-resolve-encoder-windows-x64
           path: dist/gdc-resolve-encoder-windows-x64.zip
 
+  # ──────────────────────────────────────── TEST: referinta oficiala Blackmagic ──
+  # Neschimbata, compilata ca atare — daca "Failed to add video track" apare si
+  # aici, problema nu e in codul GDC Resolve Encoder.
+  build-reference-test:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install build deps (Homebrew)
+        run: brew install cmake pkg-config x264
+
+      - name: Configure
+        run: cmake -B build -S reference_test -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: cmake --build build --config Release -j
+
+      - name: Package
+        run: |
+          BUNDLE="x264_encoder_plugin_reference.dvcp.bundle/Contents/MacOS"
+          mkdir -p "$BUNDLE"
+          cp build/x264_encoder_plugin_reference.dvcp "$BUNDLE/"
+          mkdir -p dist
+          zip -r "dist/x264-reference-test-mac-arm64.zip" "x264_encoder_plugin_reference.dvcp.bundle"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: x264-reference-test-mac-arm64
+          path: dist/x264-reference-test-mac-arm64.zip
+
   # ──────────────────────────────────────────────────── GitHub Release ──
   release:
-    needs: [build-linux, build-macos, build-windows]
+    needs: [build-linux, build-macos, build-windows, build-reference-test]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -154,3 +184,4 @@ jobs:
             artifacts/gdc-resolve-encoder-mac-arm64/gdc-resolve-encoder-mac-arm64.zip
             artifacts/gdc-resolve-encoder-windows-x64/gdc-resolve-encoder-windows-x64.zip
             artifacts/gdc-resolve-encoder-linux-x64/gdc-resolve-encoder-linux-x64.zip
+            artifacts/x264-reference-test-mac-arm64/x264-reference-test-mac-arm64.zip
