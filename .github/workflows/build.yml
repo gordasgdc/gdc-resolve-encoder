@@ -99,13 +99,24 @@ jobs:
   # ───────────────────────────────────────────────────────────── Windows ──
   build-windows:
     runs-on: windows-latest
+    continue-on-error: true  # o intrerupere temporara a gyan.dev nu trebuie sa blocheze lansarea Mac/Linux
     steps:
       - uses: actions/checkout@v4
 
       - name: Download FFmpeg shared dev build
         shell: pwsh
         run: |
-          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg.7z
+          $maxAttempts = 5
+          for ($i = 1; $i -le $maxAttempts; $i++) {
+            try {
+              Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg.7z
+              break
+            } catch {
+              Write-Host "Incercarea $i din $maxAttempts a esuat: $_"
+              if ($i -eq $maxAttempts) { throw }
+              Start-Sleep -Seconds (15 * $i)
+            }
+          }
           7z x ffmpeg.7z -offmpeg_extracted
           $dir = Get-ChildItem ffmpeg_extracted | Select-Object -First 1
           Move-Item $dir.FullName -Destination "${{ github.workspace }}\ffmpeg"
@@ -174,6 +185,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           path: artifacts
 
@@ -181,7 +193,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            artifacts/gdc-resolve-encoder-mac-arm64/gdc-resolve-encoder-mac-arm64.zip
-            artifacts/gdc-resolve-encoder-windows-x64/gdc-resolve-encoder-windows-x64.zip
-            artifacts/gdc-resolve-encoder-linux-x64/gdc-resolve-encoder-linux-x64.zip
-            artifacts/x264-reference-test-mac-arm64/x264-reference-test-mac-arm64.zip
+            artifacts/gdc-resolve-encoder-mac-arm64/*.zip
+            artifacts/gdc-resolve-encoder-windows-x64/*.zip
+            artifacts/gdc-resolve-encoder-linux-x64/*.zip
+            artifacts/x264-reference-test-mac-arm64/*.zip
