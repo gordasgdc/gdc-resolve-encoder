@@ -10,11 +10,20 @@ extern "C" {
 // multi-character constant is technically compiler-defined behavior and
 // MSVC can evaluate it differently than GCC/Clang, which would silently
 // produce the wrong FourCC on Windows.
+// FIXED: byte order was backwards. Apple/QuickTime FourCharCode convention
+// (what a C multichar literal like 'avc1' actually evaluates to on
+// GCC/Clang, which is what the official reference plugin relies on) packs
+// the FIRST character into the HIGHEST byte, not the lowest. Verified by
+// computing both 'avc1' as a multichar literal and this macro side-by-side
+// and confirming exact match. The previous byte order meant every codec
+// this plugin registered had a FourCC value Resolve's mov/mp4 writer would
+// never actually recognize as real "avc1"/"hvc1" — a very plausible cause
+// for track creation silently failing on every single codec variant.
 #define GDC_FOURCC(a, b, c, d) \
-    (static_cast<unsigned int>(static_cast<unsigned char>(a)) | \
-     (static_cast<unsigned int>(static_cast<unsigned char>(b)) << 8) | \
-     (static_cast<unsigned int>(static_cast<unsigned char>(c)) << 16) | \
-     (static_cast<unsigned int>(static_cast<unsigned char>(d)) << 24))
+    ((static_cast<unsigned int>(static_cast<unsigned char>(a)) << 24) | \
+     (static_cast<unsigned int>(static_cast<unsigned char>(b)) << 16) | \
+     (static_cast<unsigned int>(static_cast<unsigned char>(c)) << 8) | \
+     (static_cast<unsigned int>(static_cast<unsigned char>(d))))
 
 // One entry per codec variant this plugin registers with Resolve. Each
 // variant maps to a specific FFmpeg (libavcodec) encoder name — the same
