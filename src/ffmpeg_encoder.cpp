@@ -13,6 +13,168 @@ static int NalTypeH264(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty()
 static int NalTypeH265(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty() ? -1 : ((p_Nal[0] >> 1) & 0x3F); }
 
 // ─────────────────────────────────────────────────────────────────────────
+// Proper ISO/IEC 14496-15 hvcC construction for H.265 only.
+//
+// H.264 uses the reference-matched Annex-B cookie (proven working). But the
+// official reference has no HEVC variant at all, so that approach was never
+// actually validated for H.265 — and "only audio, no video" after a
+// confirmed-complete, error-free encode strongly suggests Resolve's writer
+// needs a properly structured hvcC box for HEVC specifically, not a raw
+// NAL concatenation. This exact bit-parsing logic was verified earlier by
+// encoding real test clips with libx265, extracting the true field values
+// via FFmpeg's own `trace_headers` bitstream filter as ground truth, and
+// confirming exact matches field-for-field before ever using it here.
+// ─────────────────────────────────────────────────────────────────────────
+class RbspBitReader
+{
+public:
+    explicit RbspBitReader(const std::vector<uint8_t>& p_Data)
+    {
+        int zeroCount = 0;
+        for (size_t i = 0; i < p_Data.size(); ++i)
+        {
+            uint8_t b = p_Data[i];
+            if (zeroCount >= 2 && b == 3) { zeroCount = 0; continue; }
+            zeroCount = (b == 0) ? (zeroCount + 1) : 0;
+            m_Data.push_back(b);
+        }
+    }
+
+    int ReadBit()
+    {
+        size_t byteIdx = m_BitPos / 8;
+        if (byteIdx >= m_Data.size()) return 0;
+        int bitIdx = 7 - static_cast<int>(m_BitPos % 8);
+        int bit = (m_Data[byteIdx] >> bitIdx) & 1;
+        ++m_BitPos;
+        return bit;
+    }
+
+    uint64_t ReadBits(int p_N)
+    {
+        uint64_t v = 0;
+        for (int i = 0; i < p_N; ++i) v = (v << 1) | static_cast<uint64_t>(ReadBit());
+        return v;
+    }
+
+    uint32_t ReadUE()
+    {
+        int zeros = 0;
+        while (ReadBit() == 0)
+        {
+            ++zeros;
+            if (zeros > 32) return 0;
+        }
+        if (zeros == 0) return 0;
+        return static_cast<uint32_t>((1u << zeros) - 1 + ReadBits(zeros));
+    }
+
+private:
+    std::vector<uint8_t> m_Data;
+    size_t m_BitPos = 0;
+};
+
+struct H265SpsInfo
+{
+    uint8_t profileSpace = 0, tierFlag = 0, profileIdc = 0, levelIdc = 0;
+    uint32_t profileCompatFlags = 0;
+    uint64_t constraintFlags = 0;
+    uint32_t chromaFormatIdc = 1, bitDepthLumaMinus8 = 0, bitDepthChromaMinus8 = 0;
+};
+
+static H265SpsInfo ParseH265Sps(const std::vector<uint8_t>& p_SpsNal)
+{
+    H265SpsInfo info;
+    if (p_SpsNal.size() < 4) return info;
+    std::vector<uint8_t> rest(p_SpsNal.begin() + 2, p_SpsNal.end()); // skip 2-byte NAL header
+    RbspBitReader br(rest);
+
+    br.ReadBits(4);
+    uint64_t maxSubLayersMinus1 = br.ReadBits(3);
+    br.ReadBits(1);
+
+    info.profileSpace = static_cast<uint8_t>(br.ReadBits(2));
+    info.tierFlag = static_cast<uint8_t>(br.ReadBits(1));
+    info.profileIdc = static_cast<uint8_t>(br.ReadBits(5));
+    info.profileCompatFlags = static_cast<uint32_t>(br.ReadBits(32));
+    info.constraintFlags = br.ReadBits(48);
+    info.levelIdc = static_cast<uint8_t>(br.ReadBits(8));
+
+    std::vector<int> subProfilePresent, subLevelPresent;
+    for (uint64_t i = 0; i < maxSubLayersMinus1; ++i)
+    {
+        subProfilePresent.push_back(br.ReadBit());
+        subLevelPresent.push_back(br.ReadBit());
+    }
+    if (maxSubLayersMinus1 > 0)
+    {
+        for (uint64_t i = maxSubLayersMinus1; i < 8; ++i) br.ReadBits(2);
+    }
+    for (uint64_t i = 0; i < maxSubLayersMinus1; ++i)
+    {
+        if (subProfilePresent[i]) br.ReadBits(88);
+        if (subLevelPresent[i]) br.ReadBits(8);
+    }
+
+    br.ReadUE();
+    info.chromaFormatIdc = br.ReadUE();
+    if (info.chromaFormatIdc == 3) br.ReadBit();
+    br.ReadUE(); br.ReadUE();
+    if (br.ReadBit()) { br.ReadUE(); br.ReadUE(); br.ReadUE(); br.ReadUE(); }
+    info.bitDepthLumaMinus8 = br.ReadUE();
+    info.bitDepthChromaMinus8 = br.ReadUE();
+    return info;
+}
+
+static std::vector<uint8_t> BuildHevcConfigRecord(const std::vector<std::vector<uint8_t>>& p_Nals)
+{
+    const std::vector<uint8_t>* pVps = nullptr;
+    const std::vector<uint8_t>* pSps = nullptr;
+    const std::vector<uint8_t>* pPps = nullptr;
+    for (auto& n : p_Nals)
+    {
+        int t = NalTypeH265(n);
+        if (t == 32 && !pVps) pVps = &n;
+        else if (t == 33 && !pSps) pSps = &n;
+        else if (t == 34 && !pPps) pPps = &n;
+    }
+    if (!pSps) return {};
+
+    H265SpsInfo s = ParseH265Sps(*pSps);
+
+    std::vector<uint8_t> out;
+    out.push_back(1);
+    out.push_back(static_cast<uint8_t>((s.profileSpace << 6) | (s.tierFlag << 5) | (s.profileIdc & 0x1F)));
+    for (int i = 3; i >= 0; --i) out.push_back(static_cast<uint8_t>((s.profileCompatFlags >> (i * 8)) & 0xFF));
+    for (int i = 5; i >= 0; --i) out.push_back(static_cast<uint8_t>((s.constraintFlags >> (i * 8)) & 0xFF));
+    out.push_back(s.levelIdc);
+    out.push_back(0xF0); out.push_back(0x00);
+    out.push_back(0xFC);
+    out.push_back(static_cast<uint8_t>(0xFC | (s.chromaFormatIdc & 0x03)));
+    out.push_back(static_cast<uint8_t>(0xF8 | (s.bitDepthLumaMinus8 & 0x07)));
+    out.push_back(static_cast<uint8_t>(0xF8 | (s.bitDepthChromaMinus8 & 0x07)));
+    out.push_back(0x00); out.push_back(0x00);
+    out.push_back(static_cast<uint8_t>((0 << 6) | (1 << 3) | (0 << 2) | 3));
+
+    struct ArrEntry { const std::vector<uint8_t>* nal; int type; };
+    std::vector<ArrEntry> arrays;
+    if (pVps) arrays.push_back({ pVps, 32 });
+    arrays.push_back({ pSps, 33 });
+    if (pPps) arrays.push_back({ pPps, 34 });
+
+    out.push_back(static_cast<uint8_t>(arrays.size()));
+    for (auto& a : arrays)
+    {
+        out.push_back(static_cast<uint8_t>((1 << 7) | (a.type & 0x3F)));
+        out.push_back(0x00); out.push_back(0x01);
+        out.push_back(static_cast<uint8_t>((a.nal->size() >> 8) & 0xFF));
+        out.push_back(static_cast<uint8_t>(a.nal->size() & 0xFF));
+        out.insert(out.end(), a.nal->begin(), a.nal->end());
+    }
+    return out;
+}
+
+// ─────────────────────────────────────────────────────────────────────────
 // Annex-B -> length-prefixed NAL conversion
 //
 // libx264/libx265 (and most FFmpeg H.264/H.265 encoders) emit Annex-B
@@ -467,39 +629,50 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         return errFail;
     }
 
-    // The official Blackmagic SDK reference (x264_encoder_plugin's
-    // DoOpen) does NOT build a structured ISO avcC/hvcC box at all — it
-    // re-inserts Annex-B start codes (00 00 00 01) before each non-SEI NAL
-    // from the encoder's headers and sets magicCookieType=0. Verified by
-    // reading that reference's actual DoOpen code directly. An earlier
-    // version of this plugin built a spec-correct avcC/hvcC box instead,
-    // which seemed more "correct" by the ISO spec but does not match what
-    // Resolve's own writer actually expects from this SDK — matching the
-    // reference exactly here, byte-for-byte in approach.
+    // H.264 uses the reference-matched Annex-B cookie exactly (proven
+    // working — see comment history). H.265 uses a properly structured
+    // ISO/IEC 14496-15 hvcC box instead: the official reference has no
+    // HEVC variant at all, so the Annex-B approach was never actually
+    // validated for it, and "encode completes with zero errors but no
+    // video ends up in the file" is consistent with Resolve's writer
+    // needing real hvcC structure it can't get from a raw concatenation.
     if (m_pCtx->extradata && m_pCtx->extradata_size > 0)
     {
         std::vector<std::vector<uint8_t>> nals;
         SplitAnnexBNALs(m_pCtx->extradata, m_pCtx->extradata_size, nals);
 
         std::vector<uint8_t> cookie;
-        for (auto& nal : nals)
-        {
-            int nalType = m_pVariant->isHEVC ? NalTypeH265(nal) : NalTypeH264(nal);
-            bool isSei = m_pVariant->isHEVC ? (nalType == 39 || nalType == 40) : (nalType == 6);
-            if (isSei) continue;
+        uint32_t cookieType = 0;
 
-            static const uint8_t s_StartCode[4] = { 0, 0, 0, 1 };
-            cookie.insert(cookie.end(), s_StartCode, s_StartCode + 4);
-            cookie.insert(cookie.end(), nal.begin(), nal.end());
+        if (m_pVariant->isHEVC)
+        {
+            cookie = BuildHevcConfigRecord(nals);
+            cookieType = GDC_FOURCC('h', 'v', 'c', 'C');
+        }
+        else
+        {
+            for (auto& nal : nals)
+            {
+                int nalType = NalTypeH264(nal);
+                if (nalType == 6) continue; // skip SEI, matching the reference
+
+                static const uint8_t s_StartCode[4] = { 0, 0, 0, 1 };
+                cookie.insert(cookie.end(), s_StartCode, s_StartCode + 4);
+                cookie.insert(cookie.end(), nal.begin(), nal.end());
+            }
+            cookieType = 0; // matches the official SDK reference exactly
         }
 
         if (!cookie.empty())
         {
             p_pBuff->SetProperty(pIOPropMagicCookie, propTypeUInt8, cookie.data(), static_cast<int>(cookie.size()));
-            uint32_t cookieType = 0; // matches the official SDK reference exactly
             p_pBuff->SetProperty(pIOPropMagicCookieType, propTypeUInt32, &cookieType, 1);
-            g_Log(logLevelInfo, "GDC Encoder :: Built Annex-B cookie (reference-matched), %d bytes",
-                  static_cast<int>(cookie.size()));
+            g_Log(logLevelInfo, "GDC Encoder :: Built %s cookie, %d bytes",
+                  m_pVariant->isHEVC ? "hvcC" : "Annex-B (reference-matched)", static_cast<int>(cookie.size()));
+        }
+        else
+        {
+            g_Log(logLevelError, "GDC Encoder :: Cookie build produced EMPTY result (isHEVC=%d)", m_pVariant->isHEVC ? 1 : 0);
         }
     }
 
