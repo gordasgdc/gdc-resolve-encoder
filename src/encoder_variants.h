@@ -46,6 +46,9 @@ struct EncoderVariant
     AVPixelFormat preferredPixFmt; // set explicitly rather than queried from
                                     // AVCodec::pix_fmts, which newer FFmpeg
                                     // versions have removed from the struct
+    int bitDepth;               // 8 or 10 — drives pIOPropBitDepth and which
+                                 // 8-bit vs 10-bit source buffer layout
+                                 // FillFrameFromBuffer expects from Resolve
 };
 
 // NOTE: these UUIDs are unique to GDC Resolve Encoder. If you fork this
@@ -54,27 +57,39 @@ struct EncoderVariant
 static const EncoderVariant g_EncoderVariants[] = {
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x01 },
-        "libx264", "GDC H.264 (Software x264)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, false, AV_PIX_FMT_YUV420P,
+        "libx264", "GDC H.264 (Software x264)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, false, AV_PIX_FMT_YUV420P, 8,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x02 },
-        "libx265", "GDC H.265 (Software x265)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, false, AV_PIX_FMT_YUV420P,
+        "libx265", "GDC H.265 (Software x265)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, false, AV_PIX_FMT_YUV420P, 8,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x03 },
-        "h264_videotoolbox", "GDC H.264 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true, AV_PIX_FMT_NV12,
+        "h264_videotoolbox", "GDC H.264 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true, AV_PIX_FMT_NV12, 8,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x04 },
-        "hevc_videotoolbox", "GDC H.265 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true, AV_PIX_FMT_NV12,
+        "hevc_videotoolbox", "GDC H.265 (Apple VideoToolbox)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true, AV_PIX_FMT_NV12, 8,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x05 },
-        "h264_nvenc", "GDC H.264 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true, AV_PIX_FMT_YUV420P,
+        "h264_nvenc", "GDC H.264 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, true, AV_PIX_FMT_YUV420P, 8,
     },
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x06 },
-        "hevc_nvenc", "GDC H.265 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true, AV_PIX_FMT_YUV420P,
+        "hevc_nvenc", "GDC H.265 (NVIDIA NVENC)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, true, AV_PIX_FMT_YUV420P, 8,
+    },
+    // 10-bit variants. Software only for now (libx264 High10 / libx265
+    // Main10) — hardware 10-bit support (VideoToolbox/NVENC) varies too
+    // much by GPU/driver to register unconditionally; can be added later
+    // once tested against real hardware.
+    {
+        { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x07 },
+        "libx264", "GDC H.264 10-bit (Software x264 High10)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, false, AV_PIX_FMT_YUV420P10LE, 10,
+    },
+    {
+        { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x08 },
+        "libx265", "GDC H.265 10-bit (Software x265 Main10)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, false, AV_PIX_FMT_YUV420P10LE, 10,
     },
 };
 

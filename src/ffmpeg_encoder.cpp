@@ -270,6 +270,9 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_CRF(23)
     , m_BitRateKbps(8000)
     , m_Preset(5) // "medium" — see s_GetEncoderSettings preset list
+    , m_Profile(2) // "high"
+    , m_Tune(0)    // "none"
+    , m_QP(23)
     , m_FrameCount(0)
     , m_PacketCount(0)
     , m_TotalBytesSent(0)
@@ -354,7 +357,7 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         codecInfo.SetProperty(pIOPropHSubsampling, propTypeUInt8, &hSampling, 1);
         codecInfo.SetProperty(pIOPropVSubsampling, propTypeUInt8, &vSampling, 1);
 
-        uint32_t bitDepthVal = 8;
+        uint32_t bitDepthVal = static_cast<uint32_t>(v.bitDepth);
         codecInfo.SetProperty(pIOPropBitDepth, propTypeUInt32, &bitDepthVal, 1);
         codecInfo.SetProperty(pIOPropBitsPerSample, propTypeUInt32, &bitDepthVal, 1);
 
@@ -420,11 +423,34 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     int32_t crf = 23;
     int32_t bitRateKbps = 8000;
     int32_t preset = 5;
+    int32_t profile = 2;   // index into the H.264 profile list below, default "high"
+    int32_t tune = 0;      // index into the tune list below, default "none"
+    int32_t qp = 23;
 
     p_pValues->GetINT32("gdc_quality_mode", qualityMode);
     p_pValues->GetINT32("gdc_crf", crf);
     p_pValues->GetINT32("gdc_bitrate", bitRateKbps);
     p_pValues->GetINT32("gdc_preset", preset);
+    p_pValues->GetINT32("gdc_profile", profile);
+    p_pValues->GetINT32("gdc_tune", tune);
+    p_pValues->GetINT32("gdc_qp", qp);
+
+    {
+        HostUIConfigEntryRef brandItem("gdc_brand_label");
+        brandItem.MakeLabel("GDC Resolve Encoder — by Cristi Gordas");
+        if (!brandItem.IsSuccess() || !p_pSettingsList->Append(&brandItem))
+        {
+            return errFail;
+        }
+    }
+    {
+        HostUIConfigEntryRef sepItem("gdc_brand_sep");
+        sepItem.MakeSeparator();
+        if (!sepItem.IsSuccess() || !p_pSettingsList->Append(&sepItem))
+        {
+            return errFail;
+        }
+    }
 
     if (!pVariant->isHardware)
     {
@@ -438,10 +464,50 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         }
     }
 
+    // Profile forcing: only meaningful for H.264 8-bit — the 10-bit
+    // variant is already implicitly High10, and HEVC profile forcing
+    // isn't offered here since it's not been validated against any
+    // reference the way the H.264 list was (RMT's own panel only forces
+    // H.264 profiles too).
+    if (!pVariant->isHardware && !pVariant->isHEVC && pVariant->bitDepth == 8)
+    {
+        HostUIConfigEntryRef profileItem("gdc_profile");
+        std::vector<std::string> texts = { "baseline", "main", "high", "high422" };
+        std::vector<int32_t> values = { 0, 1, 2, 3 };
+        profileItem.MakeComboBox("Profile", texts, values, profile);
+        if (!profileItem.IsSuccess() || !p_pSettingsList->Append(&profileItem))
+        {
+            return errFail;
+        }
+    }
+
+    if (!pVariant->isHardware)
+    {
+        HostUIConfigEntryRef tuneItem("gdc_tune");
+        std::vector<std::string> texts;
+        std::vector<int32_t> values;
+        if (pVariant->isHEVC)
+        {
+            // libx265 rejects "film" and "stillimage" — verified directly
+            // against the actual encoder rather than assumed from x264's list.
+            texts = { "none", "animation", "grain", "psnr", "ssim", "fastdecode", "zerolatency" };
+        }
+        else
+        {
+            texts = { "none", "film", "animation", "grain", "stillimage", "psnr", "ssim", "fastdecode", "zerolatency" };
+        }
+        for (int32_t i = 0; i < static_cast<int32_t>(texts.size()); ++i) values.push_back(i);
+        tuneItem.MakeComboBox("Tune", texts, values, tune);
+        if (!tuneItem.IsSuccess() || !p_pSettingsList->Append(&tuneItem))
+        {
+            return errFail;
+        }
+    }
+
     {
         HostUIConfigEntryRef modeItem("gdc_quality_mode");
-        std::vector<std::string> texts = { "Constant Quality (CRF)", "Target Bitrate" };
-        std::vector<int32_t> values = { 0, 1 };
+        std::vector<std::string> texts = { "Constant Quality (CRF)", "Target Bitrate", "Constant QP" };
+        std::vector<int32_t> values = { 0, 1, 2 };
         modeItem.MakeRadioBox("Rate Control", texts, values, qualityMode);
         modeItem.SetTriggersUpdate(true);
         if (!modeItem.IsSuccess() || !p_pSettingsList->Append(&modeItem))
@@ -459,11 +525,20 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
             return errFail;
         }
     }
-    else
+    else if (qualityMode == 1)
     {
         HostUIConfigEntryRef brItem("gdc_bitrate");
         brItem.MakeSlider("Bit Rate", "kbps", bitRateKbps, 500, 100000, 8000, 100);
         if (!brItem.IsSuccess() || !p_pSettingsList->Append(&brItem))
+        {
+            return errFail;
+        }
+    }
+    else
+    {
+        HostUIConfigEntryRef qpItem("gdc_qp");
+        qpItem.MakeSlider("Constant QP", "lower = better", qp, 0, 51, 23);
+        if (!qpItem.IsSuccess() || !p_pSettingsList->Append(&qpItem))
         {
             return errFail;
         }
@@ -557,6 +632,9 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     p_pBuff->GetINT32("gdc_crf", m_CRF);
     p_pBuff->GetINT32("gdc_bitrate", m_BitRateKbps);
     p_pBuff->GetINT32("gdc_preset", m_Preset);
+    p_pBuff->GetINT32("gdc_profile", m_Profile);
+    p_pBuff->GetINT32("gdc_tune", m_Tune);
+    p_pBuff->GetINT32("gdc_qp", m_QP);
 
     return OpenCodec(p_pBuff);
 }
@@ -607,6 +685,41 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
             char crfStr[8];
             snprintf(crfStr, sizeof(crfStr), "%d", m_CRF);
             av_dict_set(&pOpts, "crf", crfStr, 0);
+        }
+        else if (m_QualityMode == 2)
+        {
+            // Constant QP — same-numbered scale as CRF (0-51, lower =
+            // better) but disables adaptive rate control entirely, giving
+            // every frame the exact same quantizer. Matches RMT's own "QP"
+            // rate-control mode.
+            char qpStr[8];
+            snprintf(qpStr, sizeof(qpStr), "%d", m_QP);
+            av_dict_set(&pOpts, "qp", qpStr, 0);
+        }
+
+        // Profile forcing — H.264 8-bit software only (see
+        // s_GetEncoderSettings for why HEVC/10-bit/hardware are excluded).
+        if (!m_pVariant->isHEVC && m_pVariant->bitDepth == 8)
+        {
+            static const char* s_ProfileNames[] = { "baseline", "main", "high", "high422" };
+            int profileIdx = (m_Profile >= 0 && m_Profile < 4) ? m_Profile : 2;
+            av_dict_set(&pOpts, "profile", s_ProfileNames[profileIdx], 0);
+        }
+
+        // Tune — codec-appropriate list (libx265 rejects "film" and
+        // "stillimage", verified directly against the encoder). Index 0 is
+        // always "none" — skip setting the option entirely in that case,
+        // since x264/x265 don't accept an explicit "none" tune string.
+        if (m_Tune > 0)
+        {
+            static const char* s_TuneNamesAvc[] = { "none", "film", "animation", "grain", "stillimage", "psnr", "ssim", "fastdecode", "zerolatency" };
+            static const char* s_TuneNamesHevc[] = { "none", "animation", "grain", "psnr", "ssim", "fastdecode", "zerolatency" };
+            const char** pTuneNames = m_pVariant->isHEVC ? s_TuneNamesHevc : s_TuneNamesAvc;
+            int tuneCount = m_pVariant->isHEVC ? 7 : 9;
+            if (m_Tune > 0 && m_Tune < tuneCount)
+            {
+                av_dict_set(&pOpts, "tune", pTuneNames[m_Tune], 0);
+            }
         }
     }
     else
@@ -717,29 +830,35 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
 
     // Resolve delivers planar YUV 4:2:0 (Y plane, then U plane, then V
     // plane, tightly packed) matching pIOPropColorModel=clrYUVp + 2/2
-    // subsampling declared in s_RegisterCodecs. When the target encoder
-    // wants exactly this layout (AV_PIX_FMT_YUV420P — true for libx264),
-    // no conversion is needed at all. Only hardware encoders that want a
-    // different layout (e.g. NV12) go through swscale.
+    // subsampling declared in s_RegisterCodecs. For 10-bit variants, each
+    // sample is a 16-bit little-endian container (10 meaningful bits) —
+    // same plane layout, just double the bytes per sample, matching
+    // AV_PIX_FMT_YUV420P10LE. When the target encoder wants exactly this
+    // source layout, no conversion is needed at all; otherwise (hardware
+    // encoders wanting NV12, etc.) go through swscale.
+    const bool is10Bit = (m_pVariant->bitDepth == 10);
+    const AVPixelFormat srcFmt = is10Bit ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P;
+    const int bytesPerSample = is10Bit ? 2 : 1;
+
     const uint8_t* pSrcData[4] = {};
     int srcLinesize[4] = {};
     pSrcData[0] = reinterpret_cast<const uint8_t*>(pBuf);
-    srcLinesize[0] = static_cast<int>(width);
-    pSrcData[1] = pSrcData[0] + (width * height);
-    srcLinesize[1] = static_cast<int>(width) / 2;
-    pSrcData[2] = pSrcData[1] + ((width / 2) * (height / 2));
-    srcLinesize[2] = static_cast<int>(width) / 2;
+    srcLinesize[0] = static_cast<int>(width) * bytesPerSample;
+    pSrcData[1] = pSrcData[0] + (static_cast<size_t>(width) * height * bytesPerSample);
+    srcLinesize[1] = (static_cast<int>(width) / 2) * bytesPerSample;
+    pSrcData[2] = pSrcData[1] + ((static_cast<size_t>(width) / 2) * (height / 2) * bytesPerSample);
+    srcLinesize[2] = (static_cast<int>(width) / 2) * bytesPerSample;
 
-    if (static_cast<AVPixelFormat>(p_pFrame->format) == AV_PIX_FMT_YUV420P)
+    if (static_cast<AVPixelFormat>(p_pFrame->format) == srcFmt)
     {
-        av_image_copy(p_pFrame->data, p_pFrame->linesize, pSrcData, srcLinesize, AV_PIX_FMT_YUV420P,
+        av_image_copy(p_pFrame->data, p_pFrame->linesize, pSrcData, srcLinesize, srcFmt,
                        static_cast<int>(width), static_cast<int>(height));
     }
     else
     {
         if (!m_pSwsCtx)
         {
-            m_pSwsCtx = sws_getContext(width, height, AV_PIX_FMT_YUV420P,
+            m_pSwsCtx = sws_getContext(width, height, srcFmt,
                                         width, height, static_cast<AVPixelFormat>(p_pFrame->format),
                                         SWS_BILINEAR, nullptr, nullptr, nullptr);
         }

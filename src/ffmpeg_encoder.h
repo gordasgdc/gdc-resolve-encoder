@@ -55,10 +55,13 @@ private:
     HostCodecConfigCommon m_CommonProps;
 
     // UI-configurable settings
-    int32_t m_QualityMode; // 0 = CRF/CQ, 1 = ABR bitrate
+    int32_t m_QualityMode; // 0 = CRF/CQ, 1 = ABR bitrate, 2 = constant QP
     int32_t m_CRF;
     int32_t m_BitRateKbps;
     int32_t m_Preset; // maps to a libx264/libx265 preset string, ignored by hardware encoders
+    int32_t m_Profile; // H.264 8-bit software only: index into baseline/main/high/high422
+    int32_t m_Tune;     // index into the codec-appropriate tune list, 0 = none
+    int32_t m_QP;
 
     int64_t m_FrameCount;
     int64_t m_PacketCount;
