@@ -40,6 +40,7 @@ private:
     StatusCode OpenCodec(HostBufferRef* p_pBuff);
     StatusCode EncodeFrame(AVFrame* p_pFrame);
     StatusCode DrainPackets();
+    StatusCode FlushOneStep();
     StatusCode SendPacketToHost(AVPacket* p_pPkt);
     StatusCode FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p_pFrame);
 
@@ -63,5 +64,6 @@ private:
     int64_t m_PacketCount;
     int64_t m_TotalBytesSent;
     bool m_HeaderSent;
+    bool m_EofSentToEncoder;
     StatusCode m_Error;
 };

@@ -112,6 +112,7 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_PacketCount(0)
     , m_TotalBytesSent(0)
     , m_HeaderSent(false)
+    , m_EofSentToEncoder(false)
     , m_Error(errNone)
 {
     g_Log(logLevelInfo, "GDC Encoder :: FFmpegEncoder() constructed (variant='%s')", p_pVariant ? p_pVariant->displayName : "NULL");
@@ -311,13 +312,64 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
 
 void FFmpegEncoder::DoFlush()
 {
+    g_Log(logLevelInfo, "GDC Encoder :: DoFlush called (m_Error=%d, m_pCtx=%s)",
+          static_cast<int>(m_Error), m_pCtx ? "valid" : "NULL");
+
     if (m_Error != errNone || !m_pCtx) return;
 
-    avcodec_send_frame(m_pCtx, nullptr); // signal EOF to the encoder
-    DrainPackets();
+    // Matches the reference's exact draining architecture: loop calling a
+    // single-step flush until nothing more comes out, rather than assuming
+    // one avcodec_send_frame(null) + drain-to-EAGAIN pass captures
+    // everything up front. Found by direct comparison with X264Encoder::
+    // DoFlush, which loops DoProcess(NULL) the same way — this plugin's
+    // previous single-shot approach may have been leaving encoder-internal
+    // buffered frames (B-frame reorder lookahead) never extracted if
+    // Resolve's actual EOF-signaling path is repeated DoProcess(NULL)
+    // calls rather than (or in addition to) msgCodecFlush.
+    StatusCode sts = FlushOneStep();
+    while (sts == errNone)
+    {
+        sts = FlushOneStep();
+    }
 
     g_Log(logLevelInfo, "GDC Encoder :: DoFlush complete — %d frames sent, %d packets, %lld total bytes sent to host",
           static_cast<int>(m_FrameCount), static_cast<int>(m_PacketCount), static_cast<long long>(m_TotalBytesSent));
+}
+
+StatusCode FFmpegEncoder::FlushOneStep()
+{
+    if (!m_EofSentToEncoder)
+    {
+        avcodec_send_frame(m_pCtx, nullptr);
+        m_EofSentToEncoder = true;
+    }
+
+    int ret = avcodec_receive_packet(m_pCtx, m_pPacket);
+    if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
+    {
+        return errMoreData; // truly nothing left to drain
+    }
+    else if (ret < 0)
+    {
+        char errBuf[128];
+        av_strerror(ret, errBuf, sizeof(errBuf));
+        g_Log(logLevelError, "GDC Encoder :: avcodec_receive_packet FAILED during flush: %s (%d)", errBuf, ret);
+        return errFail;
+    }
+
+    ++m_PacketCount;
+    m_TotalBytesSent += m_pPacket->size;
+    g_Log(logLevelInfo, "GDC Encoder :: Flushed buffered packet #%d, %d bytes", static_cast<int>(m_PacketCount), m_pPacket->size);
+
+    StatusCode sts = SendPacketToHost(m_pPacket);
+    av_packet_unref(m_pPacket);
+    if (sts != errNone)
+    {
+        g_Log(logLevelError, "GDC Encoder :: SendPacketToHost FAILED during flush (err=%d)", static_cast<int>(sts));
+        return sts;
+    }
+
+    return errNone; // there may be more buffered — caller should call again
 }
 
 StatusCode FFmpegEncoder::DoInit(HostPropertyCollectionRef* p_pProps)
@@ -541,8 +593,10 @@ StatusCode FFmpegEncoder::DoProcess(HostBufferRef* p_pBuff)
 
     if ((p_pBuff == nullptr) || !p_pBuff->IsValid())
     {
-        g_Log(logLevelInfo, "GDC Encoder :: DoProcess called with no buffer (EOF signal), %d frames sent so far", static_cast<int>(m_FrameCount));
-        return errMoreData; // no more input; DoFlush() drives EOF explicitly
+        StatusCode sts = FlushOneStep();
+        g_Log(logLevelInfo, "GDC Encoder :: DoProcess(null) — flush step returned %d (%d frames sent, %d packets so far)",
+              static_cast<int>(sts), static_cast<int>(m_FrameCount), static_cast<int>(m_PacketCount));
+        return sts;
     }
 
     if (m_FrameCount == 0)
