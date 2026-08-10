@@ -110,6 +110,7 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_Preset(5) // "medium" — see s_GetEncoderSettings preset list
     , m_FrameCount(0)
     , m_PacketCount(0)
+    , m_TotalBytesSent(0)
     , m_HeaderSent(false)
     , m_Error(errNone)
 {
@@ -314,6 +315,9 @@ void FFmpegEncoder::DoFlush()
 
     avcodec_send_frame(m_pCtx, nullptr); // signal EOF to the encoder
     DrainPackets();
+
+    g_Log(logLevelInfo, "GDC Encoder :: DoFlush complete — %d frames sent, %d packets, %lld total bytes sent to host",
+          static_cast<int>(m_FrameCount), static_cast<int>(m_PacketCount), static_cast<long long>(m_TotalBytesSent));
 }
 
 StatusCode FFmpegEncoder::DoInit(HostPropertyCollectionRef* p_pProps)
@@ -588,16 +592,22 @@ StatusCode FFmpegEncoder::DrainPackets()
         }
 
         ++m_PacketCount;
+        m_TotalBytesSent += m_pPacket->size;
         if (m_PacketCount == 1)
         {
             g_Log(logLevelInfo, "GDC Encoder :: First packet received from encoder, %d bytes", m_pPacket->size);
+        }
+        if (m_PacketCount % 25 == 0)
+        {
+            g_Log(logLevelInfo, "GDC Encoder :: packet #%d, %d bytes this packet, %lld total bytes sent so far",
+                  static_cast<int>(m_PacketCount), m_pPacket->size, static_cast<long long>(m_TotalBytesSent));
         }
 
         StatusCode sts = SendPacketToHost(m_pPacket);
         av_packet_unref(m_pPacket);
         if (sts != errNone)
         {
-            g_Log(logLevelError, "GDC Encoder :: SendPacketToHost FAILED (err=%d) at packet %d", static_cast<int>(sts), m_PacketCount);
+            g_Log(logLevelError, "GDC Encoder :: SendPacketToHost FAILED (err=%d) at packet %d", static_cast<int>(sts), static_cast<int>(m_PacketCount));
             return sts;
         }
     }

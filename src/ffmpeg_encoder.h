@@ -61,6 +61,7 @@ private:
 
     int64_t m_FrameCount;
     int64_t m_PacketCount;
+    int64_t m_TotalBytesSent;
     bool m_HeaderSent;
     StatusCode m_Error;
 };
