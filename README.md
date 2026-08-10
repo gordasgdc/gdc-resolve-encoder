@@ -1,24 +1,39 @@
 # GDC Resolve Encoder
 
-Encoder gratuit, open-source, pentru DaVinci Resolve Studio — H.264 și H.265 prin FFmpeg, cu accelerare hardware automată (Apple VideoToolbox pe Mac, NVIDIA NVENC pe Windows/Linux).
+Encoder gratuit, open-source, pentru DaVinci Resolve Studio — H.264 și H.265 prin FFmpeg, cu accelerare hardware automată (Apple VideoToolbox pe Mac, NVIDIA NVENC pe Windows/Linux), plus variante 8-bit și 10-bit.
 
 **Pagina de prezentare**: https://gordasgdc.github.io/gdc-resolve-encoder/
 **English**: [README.en.md](README.en.md) · **Español**: [README.es.md](README.es.md)
 
 > Necesită **DaVinci Resolve Studio** — versiunea gratuită nu suportă IOPlugins.
 
+## Ghid complet, în 3 limbi
+
+Fiecare arhivă din [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) include și un ghid PDF complet (instalare, fiecare setare explicată cu exemple, rețete practice, depanare, licențe), în română, engleză și spaniolă. Le găsești și direct în [`docs/guides/`](docs/guides/).
+
 ## Ce înregistrează plugin-ul
 
-| Codec | Backend | Tip | Platforme |
-|---|---|---|---|
-| GDC H.264 | `libx264` | Software | Mac · Windows · Linux |
-| GDC H.265 | `libx265` | Software | Mac · Windows · Linux |
-| GDC H.264 | Apple VideoToolbox | Hardware | Mac (Apple Silicon) |
-| GDC H.265 | Apple VideoToolbox | Hardware | Mac (Apple Silicon) |
-| GDC H.264 | NVIDIA NVENC | Hardware | Windows · Linux (cu placă NVIDIA) |
-| GDC H.265 | NVIDIA NVENC | Hardware | Windows · Linux (cu placă NVIDIA) |
+| Codec | Backend | Tip | Adâncime | Platforme |
+|---|---|---|---|---|
+| GDC H.264 | `libx264` | Software | 8-bit | Mac · Windows · Linux |
+| GDC H.265 | `libx265` | Software | 8-bit | Mac · Windows · Linux |
+| GDC H.264 | Apple VideoToolbox | Hardware | 8-bit | Mac (Apple Silicon) |
+| GDC H.265 | Apple VideoToolbox | Hardware | 8-bit | Mac (Apple Silicon) |
+| GDC H.264 | NVIDIA NVENC | Hardware | 8-bit | Windows · Linux (cu placă NVIDIA) |
+| GDC H.265 | NVIDIA NVENC | Hardware | 8-bit | Windows · Linux (cu placă NVIDIA) |
+| GDC H.264 10-bit | `libx264` (High10) | Software | 10-bit | Mac · Windows · Linux |
+| GDC H.265 10-bit | `libx265` (Main10) | Software | 10-bit | Mac · Windows · Linux |
 
-Variantele hardware apar în lista de codecuri din Resolve **doar** dacă mașina ta le poate rula efectiv — FFmpeg e verificat la pornirea plugin-ului, nu presupus.
+Variantele hardware apar în lista de codecuri din Resolve **doar** dacă mașina ta le poate rula efectiv — FFmpeg e verificat la pornirea plugin-ului, nu presupus. 10-bit e disponibil momentan doar pe variantele software.
+
+## Setări disponibile în panoul plugin-ului
+
+- **Preset** — viteză vs eficiența compresiei (ultrafast → veryslow)
+- **Rate Control** — Constant Quality (CRF), Target Bitrate, sau Constant QP
+- **Profile** — baseline/main/high/high422 (doar H.264 8-bit software)
+- **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (lista diferă ușor între H.264 și H.265, verificată direct față de fiecare encoder)
+
+Fiecare setare, cu exemple concrete de când și cum s-o folosești, e explicată detaliat în ghidul PDF.
 
 ## Instalare
 
@@ -33,18 +48,17 @@ Descarcă arhiva pentru platforma ta din [Releases](https://github.com/gordasgdc
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-Instalează FFmpeg, dacă nu-l ai deja:
+Cel mai simplu: în folderul dezarhivat, rulează:
 ```bash
-brew install ffmpeg
+./install.sh
 ```
+Scriptul verifică Homebrew și FFmpeg (îl instalează dacă lipsește), elimină carantina macOS, și copiază plugin-ul la locul corect. Cere parola o singură dată.
 
-Apoi:
+Manual, dacă preferi:
 ```bash
 xattr -rd com.apple.quarantine gdc_resolve_encoder.dvcp.bundle
 mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/"
 ```
-
-Sau folosește [`install.sh`](install.sh), care face toți pașii automat — verifică Homebrew și FFmpeg, instalează FFmpeg prin Homebrew dacă lipsește, elimină carantina și copiază plugin-ul la locul corect. Dacă nici Homebrew nu e instalat, scriptul îți arată exact link-ul de instalare de mai sus și se oprește, în loc să încerce ceva ce nu poate duce la bun sfârșit.
 
 ### Windows
 
@@ -76,7 +90,7 @@ Repornește Resolve după instalare.
 1. Pagina **Deliver**, ca la orice export normal
 2. Alege formatul **MP4** sau **QuickTime**
 3. Codecurile **GDC** apar în lista de codecuri, alături de cele native
-4. Setările de calitate (CRF sau bitrate țintă) apar direct în panoul de export
+4. Setările apar direct în panoul de export (Plugin Settings)
 
 ## Cerințe
 
@@ -122,12 +136,16 @@ cmake --build build --config Release
 
 ## Limitări cunoscute
 
+- Fără suport HDR (metadate PQ/HLG) momentan — planificat pentru o versiune viitoare
+- 10-bit disponibil doar pe variantele software (x264/x265), nu și hardware
+- Fără randare multi-pass — o singură trecere momentan
 - CRF pe encoderele hardware (VideoToolbox/NVENC) cade automat pe un bitrate fix, nu o calitate constantă reală — hardware-ul nu expune CRF la fel ca x264/x265
-- Cookie-ul magic (SPS/PPS) folosit la muxare e o concatenare simplă de NAL-uri, nu un box avcC/hvcC formal — a funcționat în teste, dar n-a fost validat pe orice caz limită de muxare
 
 ## Licență
 
-MIT — vezi [LICENSE](LICENSE). Construit pe DaVinci Resolve IO Encode Plugin SDK (Blackmagic Design), redistribuit conform cerințelor SDK-ului (`include/`, `wrapper/`). Nu este afiliat cu Blackmagic Design.
+MIT pentru codul propriu — vezi [LICENSE](LICENSE). Construit pe DaVinci Resolve IO Encode Plugin SDK (Blackmagic Design), redistribuit conform cerințelor SDK-ului (`include/`, `wrapper/`). Nu este afiliat cu Blackmagic Design.
+
+Plugin-ul leagă (links) librării licențiate **GPL** (FFmpeg, libx264, libx265) — binarul compilat este, ca distribuție, supus condițiilor GPL. Detalii complete, cu implicații, în [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
 
 ## Autor
 
