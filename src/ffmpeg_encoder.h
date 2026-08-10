@@ -60,6 +60,7 @@ private:
     int32_t m_Preset; // maps to a libx264/libx265 preset string, ignored by hardware encoders
 
     int64_t m_FrameCount;
+    int64_t m_PacketCount;
     bool m_HeaderSent;
     StatusCode m_Error;
 };

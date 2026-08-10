@@ -109,6 +109,7 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_BitRateKbps(8000)
     , m_Preset(5) // "medium" — see s_GetEncoderSettings preset list
     , m_FrameCount(0)
+    , m_PacketCount(0)
     , m_HeaderSent(false)
     , m_Error(errNone)
 {
@@ -536,11 +537,21 @@ StatusCode FFmpegEncoder::DoProcess(HostBufferRef* p_pBuff)
 
     if ((p_pBuff == nullptr) || !p_pBuff->IsValid())
     {
+        g_Log(logLevelInfo, "GDC Encoder :: DoProcess called with no buffer (EOF signal), %d frames sent so far", static_cast<int>(m_FrameCount));
         return errMoreData; // no more input; DoFlush() drives EOF explicitly
     }
 
+    if (m_FrameCount == 0)
+    {
+        g_Log(logLevelInfo, "GDC Encoder :: DoProcess called for the first time");
+    }
+
     StatusCode sts = FillFrameFromBuffer(p_pBuff, m_pFrame);
-    if (sts != errNone) return sts;
+    if (sts != errNone)
+    {
+        g_Log(logLevelError, "GDC Encoder :: FillFrameFromBuffer FAILED (err=%d) at frame %d", static_cast<int>(sts), static_cast<int>(m_FrameCount));
+        return sts;
+    }
 
     return EncodeFrame(m_pFrame);
 }
@@ -550,7 +561,9 @@ StatusCode FFmpegEncoder::EncodeFrame(AVFrame* p_pFrame)
     int ret = avcodec_send_frame(m_pCtx, p_pFrame);
     if (ret < 0)
     {
-        g_Log(logLevelError, "GDC Encoder :: avcodec_send_frame failed (%d)", ret);
+        char errBuf[128];
+        av_strerror(ret, errBuf, sizeof(errBuf));
+        g_Log(logLevelError, "GDC Encoder :: avcodec_send_frame failed at frame %d: %s (%d)", static_cast<int>(m_FrameCount), errBuf, ret);
         return errFail;
     }
     ++m_FrameCount;
@@ -568,13 +581,23 @@ StatusCode FFmpegEncoder::DrainPackets()
         }
         else if (ret < 0)
         {
+            char errBuf[128];
+            av_strerror(ret, errBuf, sizeof(errBuf));
+            g_Log(logLevelError, "GDC Encoder :: avcodec_receive_packet FAILED at frame %d: %s (%d)", static_cast<int>(m_FrameCount), errBuf, ret);
             return errFail;
+        }
+
+        ++m_PacketCount;
+        if (m_PacketCount == 1)
+        {
+            g_Log(logLevelInfo, "GDC Encoder :: First packet received from encoder, %d bytes", m_pPacket->size);
         }
 
         StatusCode sts = SendPacketToHost(m_pPacket);
         av_packet_unref(m_pPacket);
         if (sts != errNone)
         {
+            g_Log(logLevelError, "GDC Encoder :: SendPacketToHost FAILED (err=%d) at packet %d", static_cast<int>(sts), m_PacketCount);
             return sts;
         }
     }
