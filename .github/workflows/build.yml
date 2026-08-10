@@ -31,8 +31,15 @@ jobs:
           BUNDLE="${{ env.PLUGIN_NAME }}.dvcp.bundle/Contents/Linux-x86-64"
           mkdir -p "$BUNDLE"
           cp build/${{ env.PLUGIN_NAME }}.dvcp "$BUNDLE/"
+
+          mkdir -p dist_linux
+          cp -R "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_linux/
+          cp docs/guides/*.pdf dist_linux/
+
           mkdir -p dist
-          zip -r "dist/gdc-resolve-encoder-linux-x64.zip" "${{ env.PLUGIN_NAME }}.dvcp.bundle"
+          cd dist_linux
+          zip -r "../dist/gdc-resolve-encoder-linux-x64.zip" .
+          cd ..
 
       - uses: actions/upload-artifact@v4
         with:
@@ -65,6 +72,7 @@ jobs:
           cp -R "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_mac/
           cp install.sh dist_mac/
           chmod +x dist_mac/install.sh
+          cp docs/guides/*.pdf dist_mac/
 
           printf '%s\n' \
             'GDC Resolve Encoder - instalare pe Mac' \
@@ -139,47 +147,21 @@ jobs:
           Copy-Item "ffmpeg\bin\avutil-*.dll" $bundle
           Copy-Item "ffmpeg\bin\swscale-*.dll" $bundle
           Copy-Item "ffmpeg\bin\swresample-*.dll" $bundle
+          New-Item -ItemType Directory -Force -Path dist_win
+          Copy-Item "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_win -Recurse
+          Copy-Item "docs\guides\*.pdf" dist_win
+
           New-Item -ItemType Directory -Force -Path dist
-          Compress-Archive -Path "${{ env.PLUGIN_NAME }}.dvcp.bundle" -DestinationPath "dist\gdc-resolve-encoder-windows-x64.zip"
+          Compress-Archive -Path "dist_win\*" -DestinationPath "dist\gdc-resolve-encoder-windows-x64.zip"
 
       - uses: actions/upload-artifact@v4
         with:
           name: gdc-resolve-encoder-windows-x64
           path: dist/gdc-resolve-encoder-windows-x64.zip
 
-  # ──────────────────────────────────────── TEST: referinta oficiala Blackmagic ──
-  # Neschimbata, compilata ca atare — daca "Failed to add video track" apare si
-  # aici, problema nu e in codul GDC Resolve Encoder.
-  build-reference-test:
-    runs-on: macos-14
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install build deps (Homebrew)
-        run: brew install cmake pkg-config x264
-
-      - name: Configure
-        run: cmake -B build -S reference_test -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
-        run: cmake --build build --config Release -j
-
-      - name: Package
-        run: |
-          BUNDLE="x264_encoder_plugin_reference.dvcp.bundle/Contents/MacOS"
-          mkdir -p "$BUNDLE"
-          cp build/x264_encoder_plugin_reference.dvcp "$BUNDLE/"
-          mkdir -p dist
-          zip -r "dist/x264-reference-test-mac-arm64.zip" "x264_encoder_plugin_reference.dvcp.bundle"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          name: x264-reference-test-mac-arm64
-          path: dist/x264-reference-test-mac-arm64.zip
-
   # ──────────────────────────────────────────────────── GitHub Release ──
   release:
-    needs: [build-linux, build-macos, build-windows, build-reference-test]
+    needs: [build-linux, build-macos, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -196,4 +178,3 @@ jobs:
             artifacts/gdc-resolve-encoder-mac-arm64/*.zip
             artifacts/gdc-resolve-encoder-windows-x64/*.zip
             artifacts/gdc-resolve-encoder-linux-x64/*.zip
-            artifacts/x264-reference-test-mac-arm64/*.zip

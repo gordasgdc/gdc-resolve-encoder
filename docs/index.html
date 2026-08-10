@@ -207,7 +207,9 @@
     <div class="nav-links">
       <a href="#about" data-i18n="nav.about">Despre</a>
       <a href="#codecs" data-i18n="nav.codecs">Codecuri</a>
+      <a href="#settings" data-i18n="nav.settings">Setări</a>
       <a href="#install" data-i18n="nav.install">Instalare</a>
+      <a href="#troubleshooting" data-i18n="nav.troubleshooting">Depanare</a>
       <a href="#download" class="nav-cta" data-i18n="nav.download">Descarcă</a>
       <div class="lang-switch">
         <button data-lang="ro" class="active">RO</button>
@@ -293,6 +295,54 @@
           <tr><td>GDC H.265</td><td class="plat-chip">NVENC</td><td><span class="badge badge-hw" data-i18n="codecs.hw">Hardware</span></td><td class="plat-chip">Windows · Linux (NVIDIA)</td></tr>
         </tbody>
       </table>
+    </div>
+  </div>
+</section>
+
+<section id="settings">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-tag" data-i18n="settings.tag">Setări</div>
+      <h2 data-i18n="settings.title">Ce înseamnă fiecare setare</h2>
+      <p class="section-desc" data-i18n="settings.desc">Explicat simplu, cu recomandări concrete — nu doar denumirea tehnică.</p>
+    </div>
+
+    <div class="reveal" style="margin-bottom:28px;">
+      <h3 style="font-size:15.5px;font-weight:600;margin-bottom:10px;" data-i18n="settings.preset_h">Preset — viteză vs eficiență</h3>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px;" data-i18n="settings.preset_desc">Nu schimbă direct calitatea vizibilă — schimbă cât timp caută encoder-ul cea mai bună compresie. Un preset mai lent produce fișiere mai mici la aceeași calitate, dar durează mai mult.</p>
+      <table>
+        <thead><tr><th data-i18n="settings.th_preset">Preset</th><th data-i18n="settings.th_recom">Recomandat pentru</th></tr></thead>
+        <tbody>
+          <tr><td>ultrafast / superfast</td><td data-i18n="settings.preset_r1">Teste rapide, previzualizări — nu pentru livrare finală.</td></tr>
+          <tr><td>fast / medium</td><td data-i18n="settings.preset_r2">Bun echilibru — medium e alegerea implicită.</td></tr>
+          <tr><td>slow / slower</td><td data-i18n="settings.preset_r3">Livrare finală, fișier mai mic, export mai lent.</td></tr>
+          <tr><td>veryslow</td><td data-i18n="settings.preset_r4">Compresie maximă — doar dacă ai timp de așteptat.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="reveal" style="margin-bottom:28px;">
+      <h3 style="font-size:15.5px;font-weight:600;margin-bottom:10px;" data-i18n="settings.rc_h">Rate Control — CRF, Bitrate, sau QP?</h3>
+      <p style="color:var(--muted);font-size:13.5px;margin-bottom:14px;" data-i18n="settings.rc_desc">Trei moduri diferite de a spune encoder-ului „cât de mult să comprime". Se alege doar unul.</p>
+      <table>
+        <thead><tr><th data-i18n="settings.th_mode">Mod</th><th data-i18n="settings.th_explain">Explicație</th></tr></thead>
+        <tbody>
+          <tr><td>CRF</td><td data-i18n="settings.crf_desc">Calitate constantă — encoder-ul decide singur bitrate-ul, cadru cu cadru. Recomandat pentru majoritatea cazurilor. 23 e valoarea implicită; 18-20 pentru calitate foarte apropiată de original.</td></tr>
+          <tr><td>Bitrate</td><td data-i18n="settings.br_desc">Îi spui exact câți kbps să folosească. Util când ai o limită strictă de dimensiune fișier.</td></tr>
+          <tr><td>QP</td><td data-i18n="settings.qp_desc">Ca și CRF ca scală, dar fără ajustare adaptivă — fiecare cadru primește exact aceeași compresie. Rar folosit în producție normală.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="about-grid" style="grid-template-columns:1fr 1fr;">
+      <div class="about-card reveal">
+        <h3 data-i18n="settings.profile_h">Profile (doar H.264, 8-bit, software)</h3>
+        <p data-i18n="settings.profile_desc"><strong>high</strong> e alegerea implicită — compatibil cu aproape orice player modern, cea mai bună compresie. <strong>baseline</strong> doar pentru dispozitive foarte vechi.</p>
+      </div>
+      <div class="about-card reveal">
+        <h3 data-i18n="settings.tune_h">Tune — optimizări pe tip de conținut</h3>
+        <p data-i18n="settings.tune_desc">Opțional. <strong>film</strong> pentru filmare normală, <strong>animation</strong> pentru desene, <strong>grain</strong> pentru grain vizibil. Dacă nu ești sigur, lasă pe „none".</p>
+      </div>
     </div>
   </div>
 </section>
@@ -447,6 +497,50 @@ sudo pacman -S ffmpeg<span class="c-muted">     # Arch</span></pre>
   </div>
 </section>
 
+<section id="recipes">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-tag" data-i18n="recipes.tag">Rețete</div>
+      <h2 data-i18n="recipes.title">Combinații gata făcute</h2>
+      <p class="section-desc" data-i18n="recipes.desc">Dacă nu vrei să analizezi fiecare setare separat, iată combinații pentru situații comune.</p>
+    </div>
+    <div class="about-grid" style="grid-template-columns:repeat(2,1fr);">
+      <div class="about-card reveal">
+        <h3 data-i18n="recipes.r1_h">Livrare client, calitate maximă</h3>
+        <p data-i18n="recipes.r1_desc">H.264 Software · Preset <strong>slow</strong> · CRF <strong>18-20</strong> · Profile <strong>high</strong></p>
+      </div>
+      <div class="about-card reveal">
+        <h3 data-i18n="recipes.r2_h">Preview rapid pentru aprobare</h3>
+        <p data-i18n="recipes.r2_desc">H.264 Hardware (dacă disponibil) · CRF <strong>26-28</strong></p>
+      </div>
+      <div class="about-card reveal">
+        <h3 data-i18n="recipes.r3_h">Export YouTube / web</h3>
+        <p data-i18n="recipes.r3_desc">H.264 Software · Preset <strong>medium/slow</strong> · CRF <strong>20-23</strong> · Profile <strong>high</strong></p>
+      </div>
+      <div class="about-card reveal">
+        <h3 data-i18n="recipes.r4_h">Arhivare / master</h3>
+        <p data-i18n="recipes.r4_desc">H.265 Software 10-bit · Preset <strong>slow/veryslow</strong> · CRF <strong>16-18</strong></p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="troubleshooting">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-tag" data-i18n="tsh.tag">Depanare</div>
+      <h2 data-i18n="tsh.title">Probleme frecvente</h2>
+    </div>
+    <ul class="req-list reveal" style="grid-template-columns:1fr;">
+      <li><span class="ic">▸</span><span data-i18n="tsh.item1"><strong>Codec-ul nu apare în listă:</strong> ai repornit complet Resolve după instalare? Pe Mac, ai rulat install.sh sau ai eliminat manual carantina?</span></li>
+      <li><span class="ic">▸</span><span data-i18n="tsh.item2"><strong>Randarea eșuează imediat:</strong> încearcă o rezoluție standard (1920x1080) ca test și verifică spațiul liber pe disc.</span></li>
+      <li><span class="ic">▸</span><span data-i18n="tsh.item3"><strong>Fișierul are doar audio, fără video:</strong> actualizează la ultima versiune — a fost o problemă cunoscută, deja rezolvată.</span></li>
+      <li><span class="ic">▸</span><span data-i18n="tsh.item4"><strong>Export foarte lent:</strong> încearcă un preset mai rapid (medium/fast) sau varianta hardware, dacă e disponibilă.</span></li>
+    </ul>
+    <p style="color:var(--muted);font-size:13.5px;margin-top:16px;" data-i18n="tsh.more">Ghidul PDF complet, inclus în fiecare arhivă de descărcare, are o listă mai extinsă de probleme și soluții.</p>
+  </div>
+</section>
+
 <section id="requirements">
   <div class="wrap">
     <div class="section-head reveal">
@@ -472,7 +566,24 @@ sudo pacman -S ffmpeg<span class="c-muted">     # Arch</span></pre>
         <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest" class="btn btn-primary">Windows (x64)</a>
         <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest" class="btn btn-primary">Linux (x64)</a>
       </div>
+      <p style="color:var(--muted);font-size:13px;margin-top:18px;" data-i18n="dl.pdf_note">Fiecare arhivă include și ghidul complet PDF, în română, engleză și spaniolă.</p>
     </div>
+  </div>
+</section>
+
+<section id="licenses">
+  <div class="wrap">
+    <div class="section-head reveal">
+      <div class="section-tag" data-i18n="lic.tag">Licențe</div>
+      <h2 data-i18n="lic.title">Licențe și atribuiri</h2>
+    </div>
+    <p class="reveal" style="color:var(--muted);font-size:13.5px;margin-bottom:14px;max-width:70ch;" data-i18n="lic.p1">Codul propriu al acestui plugin e licențiat MIT. Plugin-ul leagă (links) librării GPL — FFmpeg, libx264, libx265 — deci binarul compilat este, ca distribuție, supus condițiilor GPL, indiferent de licența codului propriu.</p>
+    <p class="reveal" style="color:var(--faint);font-size:12.5px;margin-bottom:18px;max-width:70ch;" data-i18n="lic.p2">Nu constituie consultanță juridică. Detalii complete în fișierul THIRD_PARTY_LICENSES din repository.</p>
+    <ul class="req-list reveal" style="grid-template-columns:1fr;">
+      <li><span class="ic">▸</span><span>FFmpeg — <a href="https://ffmpeg.org" style="color:var(--accent);">ffmpeg.org</a> — © FFmpeg contributors</span></li>
+      <li><span class="ic">▸</span><span>libx264 — <a href="https://www.videolan.org/developers/x264.html" style="color:var(--accent);">videolan.org</a> — © x264 project contributors</span></li>
+      <li><span class="ic">▸</span><span>libx265 — <a href="https://www.videolan.org/developers/x265.html" style="color:var(--accent);">videolan.org</a> — © MulticoreWare Inc.</span></li>
+    </ul>
   </div>
 </section>
 
@@ -535,6 +646,46 @@ const translations = {
     "req.item3":"Pentru NVENC: <strong>placă video NVIDIA</strong> cu driver actualizat.",
     "req.item4":"<strong>FFmpeg instalat separat</strong> pe Mac/Linux (brew install ffmpeg / apt install ffmpeg) — pe Windows, DLL-urile necesare vin deja incluse în arhivă.",
     "dl.title":"Descarcă GDC Resolve Encoder","dl.desc":"Gratuit, open-source, sub licență MIT.",
+    "dl.pdf_note":"Fiecare arhivă include și ghidul complet PDF, în română, engleză și spaniolă.",
+    "nav.settings":"Setări","nav.troubleshooting":"Depanare",
+    "settings.tag":"Setări","settings.title":"Ce înseamnă fiecare setare",
+    "settings.desc":"Explicat simplu, cu recomandări concrete — nu doar denumirea tehnică.",
+    "settings.preset_h":"Preset — viteză vs eficiență",
+    "settings.preset_desc":"Nu schimbă direct calitatea vizibilă — schimbă cât timp caută encoder-ul cea mai bună compresie. Un preset mai lent produce fișiere mai mici la aceeași calitate, dar durează mai mult.",
+    "settings.th_preset":"Preset","settings.th_recom":"Recomandat pentru",
+    "settings.preset_r1":"Teste rapide, previzualizări — nu pentru livrare finală.",
+    "settings.preset_r2":"Bun echilibru — medium e alegerea implicită.",
+    "settings.preset_r3":"Livrare finală, fișier mai mic, export mai lent.",
+    "settings.preset_r4":"Compresie maximă — doar dacă ai timp de așteptat.",
+    "settings.rc_h":"Rate Control — CRF, Bitrate, sau QP?",
+    "settings.rc_desc":"Trei moduri diferite de a spune encoder-ului „cât de mult să comprime\". Se alege doar unul.",
+    "settings.th_mode":"Mod","settings.th_explain":"Explicație",
+    "settings.crf_desc":"Calitate constantă — encoder-ul decide singur bitrate-ul, cadru cu cadru. Recomandat pentru majoritatea cazurilor. 23 e valoarea implicită; 18-20 pentru calitate foarte apropiată de original.",
+    "settings.br_desc":"Îi spui exact câți kbps să folosească. Util când ai o limită strictă de dimensiune fișier.",
+    "settings.qp_desc":"Ca și CRF ca scală, dar fără ajustare adaptivă — fiecare cadru primește exact aceeași compresie. Rar folosit în producție normală.",
+    "settings.profile_h":"Profile (doar H.264, 8-bit, software)",
+    "settings.profile_desc":"<strong>high</strong> e alegerea implicită — compatibil cu aproape orice player modern, cea mai bună compresie. <strong>baseline</strong> doar pentru dispozitive foarte vechi.",
+    "settings.tune_h":"Tune — optimizări pe tip de conținut",
+    "settings.tune_desc":"Opțional. <strong>film</strong> pentru filmare normală, <strong>animation</strong> pentru desene, <strong>grain</strong> pentru grain vizibil. Dacă nu ești sigur, lasă pe „none\".",
+    "recipes.tag":"Rețete","recipes.title":"Combinații gata făcute",
+    "recipes.desc":"Dacă nu vrei să analizezi fiecare setare separat, iată combinații pentru situații comune.",
+    "recipes.r1_h":"Livrare client, calitate maximă",
+    "recipes.r1_desc":"H.264 Software · Preset <strong>slow</strong> · CRF <strong>18-20</strong> · Profile <strong>high</strong>",
+    "recipes.r2_h":"Preview rapid pentru aprobare",
+    "recipes.r2_desc":"H.264 Hardware (dacă disponibil) · CRF <strong>26-28</strong>",
+    "recipes.r3_h":"Export YouTube / web",
+    "recipes.r3_desc":"H.264 Software · Preset <strong>medium/slow</strong> · CRF <strong>20-23</strong> · Profile <strong>high</strong>",
+    "recipes.r4_h":"Arhivare / master",
+    "recipes.r4_desc":"H.265 Software 10-bit · Preset <strong>slow/veryslow</strong> · CRF <strong>16-18</strong>",
+    "tsh.tag":"Depanare","tsh.title":"Probleme frecvente",
+    "tsh.item1":"<strong>Codec-ul nu apare în listă:</strong> ai repornit complet Resolve după instalare? Pe Mac, ai rulat install.sh sau ai eliminat manual carantina?",
+    "tsh.item2":"<strong>Randarea eșuează imediat:</strong> încearcă o rezoluție standard (1920x1080) ca test și verifică spațiul liber pe disc.",
+    "tsh.item3":"<strong>Fișierul are doar audio, fără video:</strong> actualizează la ultima versiune — a fost o problemă cunoscută, deja rezolvată.",
+    "tsh.item4":"<strong>Export foarte lent:</strong> încearcă un preset mai rapid (medium/fast) sau varianta hardware, dacă e disponibilă.",
+    "tsh.more":"Ghidul PDF complet, inclus în fiecare arhivă de descărcare, are o listă mai extinsă de probleme și soluții.",
+    "lic.tag":"Licențe","lic.title":"Licențe și atribuiri",
+    "lic.p1":"Codul propriu al acestui plugin e licențiat MIT. Plugin-ul leagă (links) librării GPL — FFmpeg, libx264, libx265 — deci binarul compilat este, ca distribuție, supus condițiilor GPL, indiferent de licența codului propriu.",
+    "lic.p2":"Nu constituie consultanță juridică. Detalii complete în fișierul THIRD_PARTY_LICENSES din repository.",
     "footer.by":"de","footer.license":"Licență MIT · Nu este afiliat cu Blackmagic Design. „DaVinci Resolve\" este marcă înregistrată a Blackmagic Design Pty. Ltd.",
   },
   en: {
@@ -580,6 +731,46 @@ const translations = {
     "req.item3":"For NVENC: an <strong>NVIDIA GPU</strong> with an up-to-date driver.",
     "req.item4":"<strong>FFmpeg installed separately</strong> on Mac/Linux (brew install ffmpeg / apt install ffmpeg) — on Windows, the required DLLs already ship in the archive.",
     "dl.title":"Download GDC Resolve Encoder","dl.desc":"Free, open-source, MIT licensed.",
+    "dl.pdf_note":"Every archive also includes the full PDF guide, in Romanian, English, and Spanish.",
+    "nav.settings":"Settings","nav.troubleshooting":"Troubleshooting",
+    "settings.tag":"Settings","settings.title":"What every setting means",
+    "settings.desc":"Explained plainly, with concrete recommendations — not just the technical name.",
+    "settings.preset_h":"Preset — speed vs efficiency",
+    "settings.preset_desc":"Doesn't directly change visible quality — it changes how much time the encoder spends searching for the best compression. A slower preset produces smaller files at the same quality, but takes longer.",
+    "settings.th_preset":"Preset","settings.th_recom":"Recommended for",
+    "settings.preset_r1":"Quick tests, previews — not for final delivery.",
+    "settings.preset_r2":"Good balance — medium is the default choice.",
+    "settings.preset_r3":"Final delivery, smaller file, slower export.",
+    "settings.preset_r4":"Maximum compression — only if you have time to spare.",
+    "settings.rc_h":"Rate Control — CRF, Bitrate, or QP?",
+    "settings.rc_desc":"Three different ways of telling the encoder \"how much to compress\". You pick just one.",
+    "settings.th_mode":"Mode","settings.th_explain":"Explanation",
+    "settings.crf_desc":"Constant quality — the encoder decides the bitrate itself, frame by frame. Recommended for most cases. 23 is the default; 18-20 for quality very close to the original.",
+    "settings.br_desc":"You tell it exactly how many kbps to use. Useful when you have a strict file-size limit.",
+    "settings.qp_desc":"Same scale as CRF, but without adaptive adjustment — every frame gets exactly the same compression. Rarely used in normal production.",
+    "settings.profile_h":"Profile (H.264 only, 8-bit, software)",
+    "settings.profile_desc":"<strong>high</strong> is the default — compatible with almost any modern player, best compression. <strong>baseline</strong> only for very old devices.",
+    "settings.tune_h":"Tune — content-type optimizations",
+    "settings.tune_desc":"Optional. <strong>film</strong> for normal filmed content, <strong>animation</strong> for cartoons, <strong>grain</strong> for visible grain. If unsure, leave it on \"none\".",
+    "recipes.tag":"Recipes","recipes.title":"Ready-made combinations",
+    "recipes.desc":"If you'd rather not analyze every setting individually, here are combinations for common situations.",
+    "recipes.r1_h":"Client delivery, maximum quality",
+    "recipes.r1_desc":"H.264 Software · Preset <strong>slow</strong> · CRF <strong>18-20</strong> · Profile <strong>high</strong>",
+    "recipes.r2_h":"Quick preview for approval",
+    "recipes.r2_desc":"H.264 Hardware (if available) · CRF <strong>26-28</strong>",
+    "recipes.r3_h":"Export for YouTube / web",
+    "recipes.r3_desc":"H.264 Software · Preset <strong>medium/slow</strong> · CRF <strong>20-23</strong> · Profile <strong>high</strong>",
+    "recipes.r4_h":"Archival / master",
+    "recipes.r4_desc":"H.265 Software 10-bit · Preset <strong>slow/veryslow</strong> · CRF <strong>16-18</strong>",
+    "tsh.tag":"Troubleshooting","tsh.title":"Common issues",
+    "tsh.item1":"<strong>The codec doesn't show up:</strong> did you fully restart Resolve after installing? On Mac, did you run install.sh or manually remove the quarantine?",
+    "tsh.item2":"<strong>Rendering fails immediately:</strong> try a standard resolution (1920x1080) as a test and check free disk space.",
+    "tsh.item3":"<strong>The file has audio only, no video:</strong> update to the latest version — this was a known issue, already fixed.",
+    "tsh.item4":"<strong>Export is very slow:</strong> try a faster preset (medium/fast) or the hardware variant, if available.",
+    "tsh.more":"The full PDF guide, included in every download archive, has a more extensive list of issues and solutions.",
+    "lic.tag":"Licenses","lic.title":"Licenses and attribution",
+    "lic.p1":"This plugin's own code is MIT licensed. The plugin links against GPL libraries — FFmpeg, libx264, libx265 — so the compiled binary is, as a distribution, subject to GPL terms, regardless of the license of the plugin's own code.",
+    "lic.p2":"This isn't legal advice. Full details in the THIRD_PARTY_LICENSES file in the repository.",
     "footer.by":"by","footer.license":"MIT License · Not affiliated with Blackmagic Design. \"DaVinci Resolve\" is a trademark of Blackmagic Design Pty. Ltd.",
   },
   es: {
@@ -625,6 +816,46 @@ const translations = {
     "req.item3":"Para NVENC: una <strong>GPU NVIDIA</strong> con driver actualizado.",
     "req.item4":"<strong>FFmpeg instalado por separado</strong> en Mac/Linux (brew install ffmpeg / apt install ffmpeg) — en Windows, los DLL necesarios ya vienen incluidos en el archivo.",
     "dl.title":"Descarga GDC Resolve Encoder","dl.desc":"Gratuito, de código abierto, licencia MIT.",
+    "dl.pdf_note":"Cada archivo incluye también la guía completa en PDF, en rumano, inglés y español.",
+    "nav.settings":"Ajustes","nav.troubleshooting":"Solución de problemas",
+    "settings.tag":"Ajustes","settings.title":"Qué significa cada ajuste",
+    "settings.desc":"Explicado de forma sencilla, con recomendaciones concretas — no solo el nombre técnico.",
+    "settings.preset_h":"Preset — velocidad vs eficiencia",
+    "settings.preset_desc":"No cambia directamente la calidad visible — cambia cuánto tiempo pasa el codificador buscando la mejor compresión. Un preset más lento produce archivos más pequeños con la misma calidad, pero tarda más.",
+    "settings.th_preset":"Preset","settings.th_recom":"Recomendado para",
+    "settings.preset_r1":"Pruebas rápidas, previsualizaciones — no para entrega final.",
+    "settings.preset_r2":"Buen equilibrio — medium es la opción por defecto.",
+    "settings.preset_r3":"Entrega final, archivo más pequeño, exportación más lenta.",
+    "settings.preset_r4":"Compresión máxima — solo si tienes tiempo de sobra.",
+    "settings.rc_h":"Rate Control — ¿CRF, Bitrate, o QP?",
+    "settings.rc_desc":"Tres formas distintas de decirle al codificador \"cuánto comprimir\". Se elige solo una.",
+    "settings.th_mode":"Modo","settings.th_explain":"Explicación",
+    "settings.crf_desc":"Calidad constante — el codificador decide el bitrate por sí mismo, fotograma a fotograma. Recomendado para la mayoría de los casos. 23 es el valor por defecto; 18-20 para calidad muy cercana al original.",
+    "settings.br_desc":"Le dices exactamente cuántos kbps usar. Útil cuando tienes un límite estricto de tamaño de archivo.",
+    "settings.qp_desc":"Misma escala que CRF, pero sin ajuste adaptativo — cada fotograma recibe exactamente la misma compresión. Raramente usado en producción normal.",
+    "settings.profile_h":"Profile (solo H.264, 8 bits, software)",
+    "settings.profile_desc":"<strong>high</strong> es la opción por defecto — compatible con casi cualquier reproductor moderno, mejor compresión. <strong>baseline</strong> solo para dispositivos muy antiguos.",
+    "settings.tune_h":"Tune — optimizaciones según el tipo de contenido",
+    "settings.tune_desc":"Opcional. <strong>film</strong> para filmación normal, <strong>animation</strong> para dibujos, <strong>grain</strong> para grano visible. Si tienes dudas, déjalo en \"none\".",
+    "recipes.tag":"Recetas","recipes.title":"Combinaciones ya preparadas",
+    "recipes.desc":"Si prefieres no analizar cada ajuste por separado, aquí tienes combinaciones para situaciones comunes.",
+    "recipes.r1_h":"Entrega a cliente, máxima calidad",
+    "recipes.r1_desc":"H.264 Software · Preset <strong>slow</strong> · CRF <strong>18-20</strong> · Profile <strong>high</strong>",
+    "recipes.r2_h":"Previsualización rápida para aprobación",
+    "recipes.r2_desc":"H.264 Hardware (si está disponible) · CRF <strong>26-28</strong>",
+    "recipes.r3_h":"Exportación para YouTube / web",
+    "recipes.r3_desc":"H.264 Software · Preset <strong>medium/slow</strong> · CRF <strong>20-23</strong> · Profile <strong>high</strong>",
+    "recipes.r4_h":"Archivo / máster",
+    "recipes.r4_desc":"H.265 Software 10 bits · Preset <strong>slow/veryslow</strong> · CRF <strong>16-18</strong>",
+    "tsh.tag":"Solución de problemas","tsh.title":"Problemas frecuentes",
+    "tsh.item1":"<strong>El códec no aparece:</strong> ¿reiniciaste completamente Resolve después de instalar? En Mac, ¿ejecutaste install.sh o eliminaste manualmente la cuarentena?",
+    "tsh.item2":"<strong>El renderizado falla inmediatamente:</strong> prueba con una resolución estándar (1920x1080) y comprueba el espacio libre en disco.",
+    "tsh.item3":"<strong>El archivo solo tiene audio, sin vídeo:</strong> actualiza a la última versión — fue un problema conocido, ya solucionado.",
+    "tsh.item4":"<strong>La exportación es muy lenta:</strong> prueba un preset más rápido (medium/fast) o la variante por hardware, si está disponible.",
+    "tsh.more":"La guía completa en PDF, incluida en cada archivo de descarga, tiene una lista más extensa de problemas y soluciones.",
+    "lic.tag":"Licencias","lic.title":"Licencias y atribuciones",
+    "lic.p1":"El código propio de este plugin está licenciado bajo MIT. El plugin enlaza con librerías GPL — FFmpeg, libx264, libx265 — por lo que el binario compilado está, como distribución, sujeto a los términos GPL, independientemente de la licencia del código propio.",
+    "lic.p2":"Esto no constituye asesoramiento legal. Detalles completos en el archivo THIRD_PARTY_LICENSES del repositorio.",
     "footer.by":"por","footer.license":"Licencia MIT · No afiliado con Blackmagic Design. «DaVinci Resolve» es una marca registrada de Blackmagic Design Pty. Ltd.",
   }
 };
