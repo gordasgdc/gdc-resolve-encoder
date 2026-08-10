@@ -3,6 +3,8 @@
 #include <cstring>
 #include <vector>
 #include <string>
+#include <thread>
+#include <chrono>
 
 extern "C" {
 #include <libavutil/opt.h>
@@ -734,11 +736,40 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         }
     }
 
-    int openResult = avcodec_open2(m_pCtx, pCodec, &pOpts);
+    // Hardware encoders (NVENC especially) can fail to open transiently —
+    // confirmed on real hardware (RTX 4070 Ti SUPER): the exact same
+    // resolution/settings failed with avcodec_open2 returning ENOSYS
+    // once, then succeeded twice in a row immediately after with zero
+    // code changes. Most likely the NVENC session was briefly held by
+    // something else (possibly Resolve's own NVDEC/NVENC use). Software
+    // encoders (x264/x265) don't exhibit this — a genuine parameter
+    // problem there fails every time, so no retry for those.
+    const int maxAttempts = m_pVariant->isHardware ? 3 : 1;
+    int openResult = -1;
+    for (int attempt = 1; attempt <= maxAttempts; ++attempt)
+    {
+        openResult = avcodec_open2(m_pCtx, pCodec, &pOpts);
+        if (openResult >= 0)
+        {
+            if (attempt > 1)
+            {
+                g_Log(logLevelInfo, "GDC Encoder :: avcodec_open2 succeeded for '%s' on attempt %d/%d",
+                      m_pVariant->avCodecName, attempt, maxAttempts);
+            }
+            break;
+        }
+        g_Log(logLevelWarn, "GDC Encoder :: avcodec_open2 failed for '%s' on attempt %d/%d (%d)",
+              m_pVariant->avCodecName, attempt, maxAttempts, openResult);
+        if (attempt < maxAttempts)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(300));
+        }
+    }
     av_dict_free(&pOpts);
     if (openResult < 0)
     {
-        g_Log(logLevelError, "GDC Encoder :: avcodec_open2 failed for '%s' (%d)", m_pVariant->avCodecName, openResult);
+        g_Log(logLevelError, "GDC Encoder :: avcodec_open2 failed for '%s' after %d attempt(s) (%d)",
+              m_pVariant->avCodecName, maxAttempts, openResult);
         return errFail;
     }
 
