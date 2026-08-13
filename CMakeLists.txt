@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(gdc_resolve_encoder CXX)
+project(gdc_resolve_encoder CXX C)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -8,6 +8,12 @@ set(PLUGIN_NAME gdc_resolve_encoder)
 add_library(${PLUGIN_NAME} SHARED
     src/plugin.cpp
     src/ffmpeg_encoder.cpp
+    src/license_check.cpp
+    vendor/ed25519/verify.c
+    vendor/ed25519/ge.c
+    vendor/ed25519/sc.c
+    vendor/ed25519/fe.c
+    vendor/ed25519/sha512.c
     wrapper/plugin_api.cpp
     wrapper/host_api.cpp
 )
@@ -16,6 +22,7 @@ target_include_directories(${PLUGIN_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/wrapper
+    ${CMAKE_SOURCE_DIR}/vendor/ed25519
 )
 
 if (WIN32)

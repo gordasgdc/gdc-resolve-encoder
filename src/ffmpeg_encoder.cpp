@@ -1,4 +1,5 @@
 #include "ffmpeg_encoder.h"
+#include "license_check.h"
 
 #include <cstring>
 #include <vector>
@@ -13,6 +14,13 @@ extern "C" {
 
 static int NalTypeH264(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty() ? -1 : (p_Nal[0] & 0x1F); }
 static int NalTypeH265(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty() ? -1 : ((p_Nal[0] >> 1) & 0x3F); }
+
+// ─────────────────────────────────────────────────────────────────────────
+// Licentiere — INLOCUIESTE cu cheia TA publica, generata de keygen.py
+// (gdc-license-system). Valoarea de mai jos e doar un exemplu si NU va
+// valida niciun cod real generat cu cheia ta privata.
+static const std::string kLicensePublicKeyB64 = "I1h23MNMRbOhc0ObKJrfa3oFHKA9w+SzbNrroAIy8hs=%";
+static const std::string kLicenseProductID = "gdc-resolve-encoder";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Proper ISO/IEC 14496-15 hvcC construction for H.265 only.
@@ -454,6 +462,30 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         }
     }
 
+    {
+        gdc_license::CheckResult activated = gdc_license::check_activated_license(kLicenseProductID, kLicensePublicKeyB64);
+        if (activated.valid)
+        {
+            HostUIConfigEntryRef licenseItem("gdc_license_status");
+            licenseItem.MakeLabel("Licenta: activa");
+            if (!licenseItem.IsSuccess() || !p_pSettingsList->Append(&licenseItem))
+            {
+                return errFail;
+            }
+        }
+        else
+        {
+            std::string licenseCode;
+            p_pValues->GetString("gdc_license", licenseCode);
+            HostUIConfigEntryRef licenseItem("gdc_license");
+            licenseItem.MakeTextBox("Cod licenta", licenseCode, "");
+            if (!licenseItem.IsSuccess() || !p_pSettingsList->Append(&licenseItem))
+            {
+                return errFail;
+            }
+        }
+    }
+
     if (!pVariant->isHardware)
     {
         HostUIConfigEntryRef presetItem("gdc_preset");
@@ -629,6 +661,29 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
 {
     g_Log(logLevelInfo, "GDC Encoder :: DoOpen called (variant='%s')", m_pVariant ? m_pVariant->displayName : "NULL");
     m_CommonProps.Load(p_pBuff);
+
+    gdc_license::CheckResult licenseResult = gdc_license::check_activated_license(kLicenseProductID, kLicensePublicKeyB64);
+    if (!licenseResult.valid)
+    {
+        // nicio licenta activata local inca - verificam ce a introdus
+        // utilizatorul in campul de text si, daca e valid, o salvam
+        // local pentru viitor (dupa asta, campul dispare din panou —
+        // vezi s_GetEncoderSettings — si codul brut nu mai e vizibil)
+        std::string licenseCode;
+        p_pBuff->GetString("gdc_license", licenseCode);
+        licenseResult = gdc_license::check_serial(licenseCode, kLicensePublicKeyB64, kLicenseProductID);
+        if (licenseResult.valid)
+        {
+            gdc_license::save_activated_license(kLicenseProductID, licenseCode);
+            g_Log(logLevelInfo, "GDC Encoder :: Licenta noua, activata si salvata local.");
+        }
+    }
+    if (!licenseResult.valid)
+    {
+        g_Log(logLevelError, "GDC Encoder :: Licenta invalida sau lipsa: %s", licenseResult.error.c_str());
+        return errFail;
+    }
+    g_Log(logLevelInfo, "GDC Encoder :: Licenta valida.");
 
     p_pBuff->GetINT32("gdc_quality_mode", m_QualityMode);
     p_pBuff->GetINT32("gdc_crf", m_CRF);
