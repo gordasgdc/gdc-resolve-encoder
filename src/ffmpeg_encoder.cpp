@@ -475,6 +475,15 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         }
         else
         {
+            {
+                HostUIConfigEntryRef machineIdItem("gdc_machine_id");
+                std::string machineIdLabel = "ID masina (trimite-mi asta): " + gdc_license::get_machine_id_display();
+                machineIdItem.MakeLabel(machineIdLabel);
+                if (!machineIdItem.IsSuccess() || !p_pSettingsList->Append(&machineIdItem))
+                {
+                    return errFail;
+                }
+            }
             std::string licenseCode;
             p_pValues->GetString("gdc_license", licenseCode);
             HostUIConfigEntryRef licenseItem("gdc_license");

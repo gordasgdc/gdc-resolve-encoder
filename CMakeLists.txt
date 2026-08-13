@@ -50,7 +50,7 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
 )
 
 if (APPLE)
-    target_link_libraries(${PLUGIN_NAME} PRIVATE "-framework VideoToolbox" "-framework CoreMedia" "-framework CoreVideo")
+    target_link_libraries(${PLUGIN_NAME} PRIVATE "-framework VideoToolbox" "-framework CoreMedia" "-framework CoreVideo" "-framework IOKit" "-framework CoreFoundation")
     # Apple Silicon only — Intel Macs are no longer a build target.
     set_target_properties(${PLUGIN_NAME} PROPERTIES OSX_ARCHITECTURES "arm64")
 endif()
