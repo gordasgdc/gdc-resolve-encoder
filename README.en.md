@@ -1,6 +1,6 @@
 # GDC Resolve Encoder
 
-Free, open-source encoder for DaVinci Resolve Studio — H.264 and H.265 via FFmpeg, with automatic hardware acceleration (Apple VideoToolbox on Mac, NVIDIA NVENC on Windows/Linux), plus 8-bit and 10-bit variants.
+Native, open-source encoder for DaVinci Resolve Studio — H.264 and H.265 via FFmpeg, with automatic hardware acceleration (Apple VideoToolbox on Mac, NVIDIA NVENC on Windows/Linux), plus 8-bit and 10-bit variants.
 
 **Presentation page**: https://gordasgdc.github.io/gdc-resolve-encoder/
 **Română**: [README.md](README.md) · **Español**: [README.es.md](README.es.md)
