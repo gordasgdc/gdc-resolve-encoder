@@ -6,6 +6,8 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <cmath>
+#include <algorithm>
 
 extern "C" {
 #include <libavutil/opt.h>
@@ -283,6 +285,7 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_Profile(2) // "high"
     , m_Tune(0)    // "none"
     , m_QP(23)
+    , m_GopSeconds(2) // 2s keyframe interval by default — see OpenCodec()
     , m_FrameCount(0)
     , m_PacketCount(0)
     , m_TotalBytesSent(0)
@@ -436,10 +439,12 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     int32_t profile = 2;   // index into the H.264 profile list below, default "high"
     int32_t tune = 0;      // index into the tune list below, default "none"
     int32_t qp = 23;
+    int32_t gopSeconds = 2;
 
     p_pValues->GetINT32("gdc_quality_mode", qualityMode);
     p_pValues->GetINT32("gdc_crf", crf);
     p_pValues->GetINT32("gdc_bitrate", bitRateKbps);
+    p_pValues->GetINT32("gdc_gop_seconds", gopSeconds);
     p_pValues->GetINT32("gdc_preset", preset);
     p_pValues->GetINT32("gdc_profile", profile);
     p_pValues->GetINT32("gdc_tune", tune);
@@ -587,6 +592,25 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         }
     }
 
+    {
+        // Was hardcoded at 12 frames (0.5s at 24fps, less at higher
+        // frame rates) and not tied to the timeline's actual frame rate —
+        // a much shorter keyframe interval than typical delivery targets
+        // (x264's own default is 250 frames; most streaming platforms
+        // recommend ~2s), which inflates file size with no benefit for
+        // playback-only delivery (web review, archive, client handoff).
+        // Now a real setting, in seconds (converted to a frame count in
+        // OpenCodec() using the actual timeline fps) — defaults to 2s,
+        // but goes as low as 0.x-second-equivalent territory (1 frame
+        // minimum) for anyone who needs tight broadcast-safe GOPs.
+        HostUIConfigEntryRef gopItem("gdc_gop_seconds");
+        gopItem.MakeSlider("Keyframe Interval", "seconds", gopSeconds, 1, 10, 2);
+        if (!gopItem.IsSuccess() || !p_pSettingsList->Append(&gopItem))
+        {
+            return errFail;
+        }
+    }
+
     return errNone;
 }
 
@@ -714,6 +738,7 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     p_pBuff->GetINT32("gdc_profile", m_Profile);
     p_pBuff->GetINT32("gdc_tune", m_Tune);
     p_pBuff->GetINT32("gdc_qp", m_QP);
+    p_pBuff->GetINT32("gdc_gop_seconds", m_GopSeconds);
 
     return OpenCodec(p_pBuff);
 }
@@ -739,7 +764,18 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     m_pCtx->framerate = AVRational{ static_cast<int>(m_CommonProps.GetFrameRateNum()), static_cast<int>(m_CommonProps.GetFrameRateDen()) };
     g_Log(logLevelInfo, "GDC Encoder :: width=%d height=%d frDen=%d frNum=%d",
           m_pCtx->width, m_pCtx->height, static_cast<int>(m_CommonProps.GetFrameRateDen()), static_cast<int>(m_CommonProps.GetFrameRateNum()));
-    m_pCtx->gop_size = 12;
+    // Keyframe interval, in frames — derived from the actual timeline
+    // frame rate so "N seconds" means N seconds at any fps, not a fixed
+    // frame count that behaves inconsistently across frame rates. See
+    // s_GetEncoderSettings for why this became a real setting instead of
+    // a hardcoded 12.
+    {
+        const double fps = (m_CommonProps.GetFrameRateDen() > 0)
+            ? static_cast<double>(m_CommonProps.GetFrameRateNum()) / static_cast<double>(m_CommonProps.GetFrameRateDen())
+            : 24.0;
+        const int gopSeconds = (m_GopSeconds >= 1 && m_GopSeconds <= 10) ? m_GopSeconds : 2;
+        m_pCtx->gop_size = std::max(1, static_cast<int>(std::lround(fps * gopSeconds)));
+    }
     m_pCtx->max_b_frames = 2;
     m_pCtx->pix_fmt = m_pVariant->preferredPixFmt;
     m_pCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
