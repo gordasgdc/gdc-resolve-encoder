@@ -32,6 +32,7 @@ Las variantes por hardware solo aparecen en la lista de códecs de Resolve **si*
 - **Rate Control** — Calidad Constante (CRF), Bitrate objetivo, o QP Constante
 - **Profile** — baseline/main/high/high422 (solo H.264 8 bits software)
 - **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (la lista difiere ligeramente entre H.264 y H.265, verificada directamente contra cada codificador)
+- **Keyframe Interval** — distancia entre fotogramas clave, en segundos (2s por defecto — convertida automáticamente en fotogramas, según el framerate real del timeline). Más corto = archivo más grande pero mejor para scrub/QC fotograma a fotograma; más largo = archivo más pequeño, adecuado para entrega/visionado
 
 Cada ajuste, con ejemplos concretos de cuándo y cómo usarlo, está explicado en detalle en la guía PDF.
 

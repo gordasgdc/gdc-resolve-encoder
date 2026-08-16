@@ -32,6 +32,7 @@ Hardware variants only show up in Resolve's codec list if your machine can actua
 - **Rate Control** — Constant Quality (CRF), Target Bitrate, or Constant QP
 - **Profile** — baseline/main/high/high422 (H.264 8-bit software only)
 - **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (the list differs slightly between H.264 and H.265, verified directly against each encoder)
+- **Keyframe Interval** — distance between keyframes, in seconds (2s by default — converted to a frame count automatically, based on the timeline's actual frame rate). Shorter = bigger file but better for frame-by-frame scrubbing/QC; longer = smaller file, suited for delivery/playback
 
 Every setting, with concrete examples of when and how to use it, is explained in detail in the PDF guide.
 
