@@ -32,7 +32,6 @@ Variantele hardware apar în lista de codecuri din Resolve **doar** dacă mașin
 - **Rate Control** — Constant Quality (CRF), Target Bitrate, sau Constant QP
 - **Profile** — baseline/main/high/high422 (doar H.264 8-bit software)
 - **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (lista diferă ușor între H.264 și H.265, verificată direct față de fiecare encoder)
-- **Keyframe Interval** — distanța dintre cadre-cheie, în secunde (implicit 2s — convertită automat în cadre, pe baza framerate-ului real al timeline-ului). Interval mai scurt = fișier mai mare, dar mai bun pentru scrub/QC frame-cu-frame; mai lung = fișier mai mic, potrivit pentru livrare/vizionare
 
 Fiecare setare, cu exemple concrete de când și cum s-o folosești, e explicată detaliat în ghidul PDF.
 

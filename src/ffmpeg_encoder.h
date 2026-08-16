@@ -62,7 +62,6 @@ private:
     int32_t m_Profile; // H.264 8-bit software only: index into baseline/main/high/high422
     int32_t m_Tune;     // index into the codec-appropriate tune list, 0 = none
     int32_t m_QP;
-    int32_t m_GopSeconds; // keyframe interval in seconds, converted to a frame count in OpenCodec()
 
     int64_t m_FrameCount;
     int64_t m_PacketCount;
