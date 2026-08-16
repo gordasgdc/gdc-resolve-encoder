@@ -28,11 +28,12 @@ extern "C" {
 // One entry per codec variant this plugin registers with Resolve. Each
 // variant maps to a specific FFmpeg (libavcodec) encoder name — the same
 // generic FFmpegEncoder class drives all of them, whether it's a CPU
-// encoder (libx264/libx265/libsvtav1) or a platform hardware encoder
+// encoder (libx264/libx265) or a platform hardware encoder
 // (h264_videotoolbox on Mac, h264_nvenc on Windows/Linux with an NVIDIA
 // GPU). Availability of hardware variants is checked at plugin startup —
 // if FFmpeg can't find the encoder on this machine, it's simply not
 // registered, so the same binary adapts per-platform automatically.
+// (No AV1 variant yet — libsvtav1 could be added the same way later.)
 
 struct EncoderVariant
 {
