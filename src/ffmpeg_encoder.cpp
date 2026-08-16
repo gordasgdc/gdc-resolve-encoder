@@ -19,7 +19,7 @@ static int NalTypeH265(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty()
 // Licentiere — INLOCUIESTE cu cheia TA publica, generata de keygen.py
 // (gdc-license-system). Valoarea de mai jos e doar un exemplu si NU va
 // valida niciun cod real generat cu cheia ta privata.
-static const std::string kLicensePublicKeyB64 = "I1h23MNMRbOhc0ObKJrfa3oFHKA9w+SzbNrroAIy8hs=%";
+static const std::string kLicensePublicKeyB64 = "I1h23MNMRbOhc0ObKJrfa3oFHKA9w+SzbNrroAIy8hs=";
 static const std::string kLicenseProductID = "gdc-resolve-encoder";
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -683,8 +683,21 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
         licenseResult = gdc_license::check_serial(licenseCode, kLicensePublicKeyB64, kLicenseProductID);
         if (licenseResult.valid)
         {
-            gdc_license::save_activated_license(kLicenseProductID, licenseCode);
-            g_Log(logLevelInfo, "GDC Encoder :: Licenta noua, activata si salvata local.");
+            // Randarea curenta merge oricum (licenseResult.valid e deja
+            // true din check_serial de mai sus), dar daca scrierea pe
+            // disc esueaza (permisiuni, disc plin), utilizatorului i se
+            // va cere codul din nou la fiecare pornire a Resolve, fara
+            // niciun indiciu de ce — logam explicit ca sa fie clar ce
+            // s-a intamplat, in loc sa pretindem mereu succes.
+            if (gdc_license::save_activated_license(kLicenseProductID, licenseCode))
+            {
+                g_Log(logLevelInfo, "GDC Encoder :: Licenta noua, activata si salvata local.");
+            }
+            else
+            {
+                g_Log(logLevelWarn, "GDC Encoder :: Licenta valida pentru aceasta randare, dar salvarea locala a esuat (%s) — codul va fi cerut din nou la urmatoarea pornire.",
+                      gdc_license::activation_file_path(kLicenseProductID).c_str());
+            }
         }
     }
     if (!licenseResult.valid)
