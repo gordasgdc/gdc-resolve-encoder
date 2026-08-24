@@ -18,10 +18,24 @@
 
 namespace gdc_license {
 
+// Politica de fallback la esec de validare (kill-switch diferentiat,
+// decizie 2026-08-24) — un singur bool "valid" nu mai e suficient, apelantul
+// (plugin.cpp) trebuie sa stie DE CE a esuat ca sa aleaga reactia corecta:
+//   - bad_signature  -> tamper evident (cod falsificat/corupt): blocare dura,
+//     apelantul sterge licenta locala salvata (vezi check_activated_license).
+//   - wrong_machine  -> cod legat de alta masina: mod demo (blocheaza export),
+//     licenta locala NU se sterge (poate fi disc inlocuit legitim).
+//   - hwid_unavailable -> nu s-a putut citi hardware-ul acum (WMI/IOKit
+//     indisponibil temporar): se pastreaza ultima stare valida cateva zile
+//     (grace period, vezi GRACE_PERIOD_SECONDS in .cpp), fara blocare.
+//   - expired -> stare de business normala, neschimbata de aceasta politica.
 struct CheckResult {
     bool valid = false;
     bool expired = false;
     bool wrong_machine = false;
+    bool bad_signature = false;
+    bool hwid_unavailable = false;
+    bool grace_active = false;  // valid=true doar datorita grace period-ului
     std::string error;
     uint64_t expires_at = 0;
 };
