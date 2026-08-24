@@ -34,6 +34,9 @@ if (WIN32)
     target_include_directories(${PLUGIN_NAME} PRIVATE "${FFMPEG_ROOT}/include")
     target_link_directories(${PLUGIN_NAME} PRIVATE "${FFMPEG_ROOT}/lib")
     target_link_libraries(${PLUGIN_NAME} PRIVATE avcodec avutil swscale swresample)
+    # GDC-SEC-02: machine_id_hash() interogheaza WMI (Win32_ComputerSystemProduct
+    # + Win32_DiskDrive) prin COM — vezi src/license_check.cpp.
+    target_link_libraries(${PLUGIN_NAME} PRIVATE wbemuuid ole32 oleaut32)
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
