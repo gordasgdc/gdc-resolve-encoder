@@ -130,7 +130,7 @@ std::string wmi_query_first(const wchar_t* wql, const wchar_t* property) {
 
             IEnumWbemClassObject* enumerator = nullptr;
             if (SUCCEEDED(services->ExecQuery(_bstr_t(L"WQL"), _bstr_t(wql),
-                                               WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATE,
+                                               WBEM_FLAG_FORWARD_ONLY | WBEM_FLAG_RETURN_IMMEDIATELY,
                                                nullptr, &enumerator))) {
                 IWbemClassObject* obj = nullptr;
                 ULONG returned = 0;
