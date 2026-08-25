@@ -29,6 +29,21 @@ namespace gdc_license {
 namespace {
 
 const size_t kPayloadSize = 22;  // 4 (hash produs) + 8 (expirare) + 4 (nonce unic) + 6 (hash masina)
+const size_t kPayloadSizeV2 = 23;  // v1 + 1 octet de platforma (GDC-LICENSE-PLATFORM, Etapa 2)
+
+LicensePlatform current_platform() {
+#if defined(_WIN32)
+    return LicensePlatform::WindowsOnly;
+#elif defined(__APPLE__)
+    return LicensePlatform::MacOnly;
+#else
+    return LicensePlatform::Any;  // Linux: nicio restrictie de platforma deocamdata
+#endif
+}
+
+bool platform_allows(LicensePlatform stored, LicensePlatform current) {
+    return stored == LicensePlatform::Any || stored == LicensePlatform::CrossPlatform || stored == current;
+}
 
 std::vector<uint8_t> base64_decode(const std::string& in) {
     static const std::string chars =
@@ -257,16 +272,21 @@ CheckResult check_serial(const std::string& serial, const std::string& public_ke
     }
 
     std::vector<uint8_t> packed = base32_decode(serial);
-    if (packed.size() != kPayloadSize + 64) {
+    size_t effective_size;
+    if (packed.size() == kPayloadSize + 64) {
+        effective_size = kPayloadSize;
+    } else if (packed.size() == kPayloadSizeV2 + 64) {
+        effective_size = kPayloadSizeV2;
+    } else {
         result.bad_signature = true;  // format corupt/scurtat -> aceeasi categorie "tamper" ca semnatura invalida
         result.error = "Format de cod serial invalid.";
         return result;
     }
 
     const uint8_t* payload = packed.data();
-    const uint8_t* signature = packed.data() + kPayloadSize;
+    const uint8_t* signature = packed.data() + effective_size;
 
-    int valid = ed25519_verify(signature, payload, kPayloadSize, public_key.data());
+    int valid = ed25519_verify(signature, payload, effective_size, public_key.data());
     if (!valid) {
         result.bad_signature = true;  // tamper evident -> kill-switch: blocare dura
         result.error = "Cod serial invalid — semnatura nu se potriveste.";
@@ -291,6 +311,15 @@ CheckResult check_serial(const std::string& serial, const std::string& public_ke
             result.error = "Codul serial a expirat.";
             return result;
         }
+    }
+
+    result.platform = (effective_size == kPayloadSizeV2 && payload[22] <= 3)
+        ? static_cast<LicensePlatform>(payload[22])
+        : LicensePlatform::Any;
+    if (!platform_allows(result.platform, current_platform())) {
+        result.wrong_platform = true;
+        result.error = "Acest cod e valabil pentru alta platforma.";
+        return result;
     }
 
     const uint8_t* stored_machine_hash = payload + 16;

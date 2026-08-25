@@ -29,15 +29,29 @@ namespace gdc_license {
 //     indisponibil temporar): se pastreaza ultima stare valida cateva zile
 //     (grace period, vezi GRACE_PERIOD_SECONDS in .cpp), fara blocare.
 //   - expired -> stare de business normala, neschimbata de aceasta politica.
+// GDC-LICENSE-PLATFORM (Etapa 2, 2026-08-25): al 23-lea octet, ADAUGAT la
+// finalul payload-ului v1 (22 octeti) — niciodata repurposand nonce-ul
+// existent, ca orice cod v1 deja emis sa ramana byte-cu-byte compatibil.
+//   0 = legacy/oricare platforma (orice cod v1 decodeaza mereu asa)
+//   1 = mac_only, 2 = windows_only, 3 = cross_platform
+enum class LicensePlatform : uint8_t {
+    Any = 0,
+    MacOnly = 1,
+    WindowsOnly = 2,
+    CrossPlatform = 3,
+};
+
 struct CheckResult {
     bool valid = false;
     bool expired = false;
     bool wrong_machine = false;
     bool bad_signature = false;
     bool hwid_unavailable = false;
+    bool wrong_platform = false;  // codul e valid dar pentru alta platforma
     bool grace_active = false;  // valid=true doar datorita grace period-ului
     std::string error;
     uint64_t expires_at = 0;
+    LicensePlatform platform = LicensePlatform::Any;
 };
 
 // public_key_b64: cheia publica (Base64), generata o singura data de keygen.py
