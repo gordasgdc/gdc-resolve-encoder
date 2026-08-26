@@ -43,6 +43,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: gdc-resolve-encoder-linux-x64
           path: dist/gdc-resolve-encoder-linux-x64.zip
 
@@ -101,6 +102,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: gdc-resolve-encoder-mac-arm64
           path: dist/gdc-resolve-encoder-mac-arm64.zip
 
@@ -156,6 +158,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
+          retention-days: 1
           name: gdc-resolve-encoder-windows-x64
           path: dist/gdc-resolve-encoder-windows-x64.zip
 
