@@ -9,44 +9,9 @@ env:
   PLUGIN_NAME: gdc_resolve_encoder
 
 jobs:
-  # ───────────────────────────────────────────────────────────── Linux ──
-  build-linux:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Install build deps
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y cmake pkg-config libavcodec-dev libavutil-dev libswscale-dev
-
-      - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release
-
-      - name: Build
-        run: cmake --build build --config Release -j
-
-      - name: Package (Linux-only bundle)
-        run: |
-          BUNDLE="${{ env.PLUGIN_NAME }}.dvcp.bundle/Contents/Linux-x86-64"
-          mkdir -p "$BUNDLE"
-          cp build/${{ env.PLUGIN_NAME }}.dvcp "$BUNDLE/"
-
-          mkdir -p dist_linux
-          cp -R "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_linux/
-          cp docs/guides/*.pdf dist_linux/
-
-          mkdir -p dist
-          cd dist_linux
-          zip -r "../dist/gdc-resolve-encoder-linux-x64.zip" .
-          cd ..
-
-      - uses: actions/upload-artifact@v4
-        with:
-          retention-days: 1
-          name: gdc-resolve-encoder-linux-x64
-          path: dist/gdc-resolve-encoder-linux-x64.zip
-
+  # Linux scos din lansari incepand cu v1.5.0 - cerut explicit de Cristi
+  # (2026-09-04). Vezi CLAUDE.md pentru motiv/detalii; jobul build-linux a
+  # fost eliminat complet, nu doar dezactivat, ca sa nu ramana cod mort.
   # ───────────────────────────────────────────────────────── macOS (arm64) ──
   build-macos:
     runs-on: macos-14 # Apple Silicon runner
@@ -109,7 +74,7 @@ jobs:
   # ───────────────────────────────────────────────────────────── Windows ──
   build-windows:
     runs-on: windows-latest
-    continue-on-error: true  # o intrerupere temporara a gyan.dev nu trebuie sa blocheze lansarea Mac/Linux
+    continue-on-error: true  # o intrerupere temporara a gyan.dev nu trebuie sa blocheze lansarea Mac
     steps:
       - uses: actions/checkout@v4
 
@@ -166,7 +131,7 @@ jobs:
 
   # ──────────────────────────────────────────────────── GitHub Release ──
   release:
-    needs: [build-linux, build-macos, build-windows]
+    needs: [build-macos, build-windows]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -182,4 +147,3 @@ jobs:
           files: |
             artifacts/gdc-resolve-encoder-mac-arm64/*.zip
             artifacts/gdc-resolve-encoder-windows-x64/*.zip
-            artifacts/gdc-resolve-encoder-linux-x64/*.zip

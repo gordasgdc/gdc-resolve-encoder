@@ -811,3 +811,21 @@ actualizări și pachetul de instalare sunt responsabilitatea Manager-ului
 care îl instalează, nu ale acestui repo direct. Licențierea (Ed25519,
 Machine ID) rămâne totuși sincronizată cu `LicenseCore.swift`/`.cs`/`.py` —
 vezi `gdc-plugin-manager/CLAUDE.md`.
+
+**2026-09-04 — Linux scos din lansări, începând cu v1.5.0.** Cerut explicit
+de Cristi ("începand cu urmatoarea actualizare scoatem varianta de
+Linux"). Făcut: jobul `build-linux` eliminat COMPLET din
+`.github/workflows/build.yml` (nu doar dezactivat — cod mort), `needs:`/
+lista de fișiere a jobului `release` actualizate să nu mai aștepte/atașeze
+asset-ul Linux, `README.md`/`.en.md`/`.es.md` curățate de toate mențiunile
+Linux (tabele de codecuri, secțiune de instalare, cerințe, diagrama
+bundle-ului, comanda de build din sursă) — verificat cu `grep -i linux`,
+zero rezultate rămase în toate cele 3 README-uri. **NEFĂCUT încă, TODO
+explicit**: `docs/index.html` (pagina de prezentare, `gordas.dev`-style)
+încă are un tab întreg „Linux" în secțiunea de instalare, un buton de
+download către `gdc-resolve-encoder-linux-x64.zip` (care va da 404 la
+prima lansare fără acel asset), rânduri de tabel și texte i18n (RO/EN/ES)
+menționând Linux — pagină HTML/JS de o singură bucată, nu am citit-o
+integral și nu am editat-o acum ca să nu risc s-o stric fără verificare
+vizuală reală. De făcut la următoarea atingere a acestui repo, înainte de
+`v1.5.0`.

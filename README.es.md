@@ -1,6 +1,6 @@
 # GDC Resolve Encoder
 
-Codificador nativo y de código abierto para DaVinci Resolve Studio — H.264 y H.265 vía FFmpeg, con aceleración por hardware automática (Apple VideoToolbox en Mac, NVIDIA NVENC en Windows/Linux), además de variantes de 8 bits y 10 bits.
+Codificador nativo y de código abierto para DaVinci Resolve Studio — H.264 y H.265 vía FFmpeg, con aceleración por hardware automática (Apple VideoToolbox en Mac, NVIDIA NVENC en Windows), además de variantes de 8 bits y 10 bits.
 
 **Página de presentación**: https://gordasgdc.github.io/gdc-resolve-encoder/
 **Română**: [README.md](README.md) · **English**: [README.en.md](README.en.md)
@@ -15,14 +15,14 @@ Cada archivo en [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/rele
 
 | Códec | Backend | Tipo | Profundidad | Plataformas |
 |---|---|---|---|---|
-| GDC H.264 | `libx264` | Software | 8 bits | Mac · Windows · Linux |
-| GDC H.265 | `libx265` | Software | 8 bits | Mac · Windows · Linux |
+| GDC H.264 | `libx264` | Software | 8 bits | Mac · Windows |
+| GDC H.265 | `libx265` | Software | 8 bits | Mac · Windows |
 | GDC H.264 | Apple VideoToolbox | Hardware | 8 bits | Mac (Apple Silicon) |
 | GDC H.265 | Apple VideoToolbox | Hardware | 8 bits | Mac (Apple Silicon) |
-| GDC H.264 | NVIDIA NVENC | Hardware | 8 bits | Windows · Linux (GPU NVIDIA) |
-| GDC H.265 | NVIDIA NVENC | Hardware | 8 bits | Windows · Linux (GPU NVIDIA) |
-| GDC H.264 10 bits | `libx264` (High10) | Software | 10 bits | Mac · Windows · Linux |
-| GDC H.265 10 bits | `libx265` (Main10) | Software | 10 bits | Mac · Windows · Linux |
+| GDC H.264 | NVIDIA NVENC | Hardware | 8 bits | Windows (GPU NVIDIA) |
+| GDC H.265 | NVIDIA NVENC | Hardware | 8 bits | Windows (GPU NVIDIA) |
+| GDC H.264 10 bits | `libx264` (High10) | Software | 10 bits | Mac · Windows |
+| GDC H.265 10 bits | `libx265` (Main10) | Software | 10 bits | Mac · Windows |
 
 Las variantes por hardware solo aparecen en la lista de códecs de Resolve **si** tu máquina puede ejecutarlas realmente — FFmpeg se comprueba al iniciar el plugin, no se asume. El modo de 10 bits está disponible actualmente solo por software.
 
@@ -30,7 +30,10 @@ Las variantes por hardware solo aparecen en la lista de códecs de Resolve **si*
 
 - **Preset** — velocidad vs eficiencia de compresión (ultrafast → veryslow)
 - **Rate Control** — Calidad Constante (CRF), Bitrate objetivo, o QP Constante
-- **Profile** — baseline/main/high/high422 (solo H.264 8 bits software)
+- **Profile** — baseline/main/high (solo H.264 8 bits software)
+- **Level** — 3.0-5.2 o Auto (H.264/H.265 software)
+- **Keyframe Interval** — distancia entre keyframes, en segundos
+- **Advanced Params** — parámetros x264/x265 directos (experto), ej. `aq-mode=3:psy-rd=1.0,0.15`
 - **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (la lista difiere ligeramente entre H.264 y H.265, verificada directamente contra cada codificador)
 
 Cada ajuste, con ejemplos concretos de cuándo y cómo usarlo, está explicado en detalle en la guía PDF.
@@ -39,7 +42,7 @@ Cada ajuste, con ejemplos concretos de cuándo y cómo usarlo, está explicado e
 
 Descarga el archivo para tu plataforma desde [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest).
 
-> **Sobre FFmpeg**: el plugin no incluye FFmpeg (tamaño grande, complicaciones de licencia GPL/LGPL). En **Mac y Linux**, necesitas FFmpeg instalado por separado en el sistema. En **Windows**, las librerías necesarias ya vienen incluidas en el archivo — no hay que instalar nada extra.
+> **Sobre FFmpeg**: el plugin no incluye FFmpeg (tamaño grande, complicaciones de licencia GPL/LGPL). En **Mac**, necesitas FFmpeg instalado por separado en el sistema. En **Windows**, las librerías necesarias ya vienen incluidas en el archivo — no hay que instalar nada extra.
 
 ### macOS (Apple Silicon)
 
@@ -64,26 +67,13 @@ mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Desi
 
 No necesitas FFmpeg por separado — los DLL necesarios ya vienen en el archivo.
 
-Mueve la carpeta completa `gdc_resolve_encoder.dvcp.bundle` (la carpeta entera, no solo el archivo interior) a:
+Lo más simple: en la carpeta descomprimida, ejecuta `install.bat` (doble clic) — coloca el paquete en la carpeta correcta automáticamente, pidiendo permisos de Administrador si hace falta.
+
+Manual, si prefieres: mueve la carpeta completa `gdc_resolve_encoder.dvcp.bundle` (la carpeta entera, no solo el archivo interior) a:
 ```
 %ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\
 ```
 
-### Linux
-
-Instala FFmpeg desde el gestor de paquetes de tu distribución, por ejemplo:
-```bash
-sudo apt install ffmpeg        # Debian/Ubuntu
-sudo dnf install ffmpeg        # Fedora
-sudo pacman -S ffmpeg          # Arch
-```
-
-Luego mueve el bundle a:
-```
-/opt/resolve/IOPlugins/
-```
-
-Reinicia Resolve después de instalar.
 
 ## Cómo se usa
 
@@ -95,8 +85,8 @@ Reinicia Resolve después de instalar.
 ## Requisitos
 
 - **DaVinci Resolve Studio** (la edición gratuita no soporta IOPlugins)
-- **macOS Apple Silicon**, Windows de 64 bits, o Linux — los Mac Intel no son compatibles
-- **FFmpeg instalado en el sistema** — Mac/Linux (Windows tiene los DLL incluidos en el archivo)
+- **macOS Apple Silicon** o Windows de 64 bits — los Mac Intel no son compatibles
+- **FFmpeg instalado en el sistema** — Mac (Windows tiene los DLL incluidos en el archivo)
 - Para NVENC: una GPU **NVIDIA** con driver actualizado
 
 ## Estructura correcta del bundle
@@ -106,9 +96,7 @@ gdc_resolve_encoder.dvcp.bundle/
 └── Contents/
     ├── MacOS/              (solo Mac)
     │   └── gdc_resolve_encoder.dvcp
-    ├── Win64/               (solo Windows)
-    │   └── gdc_resolve_encoder.dvcp
-    └── Linux-x86-64/        (solo Linux)
+    └── Win64/               (solo Windows)
         └── gdc_resolve_encoder.dvcp
 ```
 
@@ -119,11 +107,6 @@ Cada archivo en [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/rele
 Consulta [`.github/workflows/build.yml`](.github/workflows/build.yml) para los pasos exactos usados en cada release; resumen:
 
 ```bash
-# Linux
-sudo apt-get install cmake pkg-config libavcodec-dev libavutil-dev libswscale-dev
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-
 # macOS (solo arm64)
 brew install cmake pkg-config ffmpeg
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
