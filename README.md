@@ -46,6 +46,10 @@ Descarcă arhiva pentru platforma ta din [Releases](https://github.com/gordasgdc
 
 ### macOS (Apple Silicon)
 
+**Recomandat**: un instalator `.pkg` semnat + notarizat de Apple (dublu-clic, cu pas de acceptare a licenței, fără Terminal) — construit local cu `./build_installer.sh <versiune>` (necesită certificat Developer ID configurat, vezi `codesigning/README.md`). Nu e încă publicat automat pe fiecare release GitHub — TODO.
+
+Alternativ, arhiva de pe [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) include `install.sh` (Terminal):
+
 **Cerință prealabilă**: [Homebrew](https://brew.sh) — dacă nu-l ai deja instalat, rulează:
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"

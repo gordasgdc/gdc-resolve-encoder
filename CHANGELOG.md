@@ -5,6 +5,23 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.4.1 (2026-09-04) — Instalator .pkg semnat + notarizat (Mac)
+
+**Instalare Mac, complet nouă**: în loc de `install.sh` (Terminal), acum
+există un pachet `.pkg` semnat cu certificat Apple Developer ID și
+**notarizat** — dublu-clic, acceptă licența, gata, fără niciun pas în
+Terminal și fără avertismentul de Gatekeeper. Plugin-ul ajunge direct în
+folderul corect din DaVinci Resolve.
+
+**Fix real, important, găsit la testare**: versiunile publicate anterior
+pe GitHub erau construite cu o versiune de FFmpeg diferită de cea
+instalată de utilizatori prin Homebrew — plugin-ul nu se încărca deloc în
+Resolve, fără nicio eroare vizibilă (exact simptomul "nu apare în listă"
+raportat). Acesta a fost probabil un contributor real la instabilitatea
+raportată inițial. Notă tehnică completă în CLAUDE.md — rămâne o
+fragilitate structurală (leagă plugin-ul de versiunea exactă de FFmpeg de
+pe mașina de compilare) de rezolvat definitiv într-o sesiune viitoare.
+
 ## v1.4.0 (2026-09-04) — Calitate, opțiuni noi și instalator Windows
 
 **Calitate & compatibilitate**:

@@ -1,0 +1,16 @@
+#!/bin/bash
+# Preinstall script rulat de installer.d (pkgbuild --scripts) INAINTE de a
+# scrie noua copie a plugin-ului.
+#
+# NU contine niciun hack de Gatekeeper/quarantine — pachetul e semnat cu
+# Developer ID Installer si notarizat/stapled, deci Gatekeeper il accepta
+# nativ. Singurul scop aici: curatarea unei instalari vechi ramase.
+
+set -e
+
+DEST="/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/gdc_resolve_encoder.dvcp.bundle"
+if [ -d "$DEST" ]; then
+    rm -rf "$DEST"
+fi
+
+exit 0
