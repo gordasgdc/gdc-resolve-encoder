@@ -152,6 +152,8 @@ jobs:
           New-Item -ItemType Directory -Force -Path dist_win
           Copy-Item "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_win -Recurse
           Copy-Item "docs\guides\*.pdf" dist_win
+          Copy-Item "install.ps1" dist_win
+          Copy-Item "install.bat" dist_win
 
           New-Item -ItemType Directory -Force -Path dist
           Compress-Archive -Path "dist_win\*" -DestinationPath "dist\gdc-resolve-encoder-windows-x64.zip"

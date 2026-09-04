@@ -57,6 +57,7 @@ namespace IOPlugin
         virtual StatusCode SetProperty(PropertyID p_PropID, PropertyType p_PropType, const void* p_pValue, int p_NumValues) = 0;
 
     public:
+        bool GetINT16(PropertyID p_ID, int16_t& p_Val);
         bool GetINT32(PropertyID p_ID, int32_t& p_Val);
         bool GetUINT32(PropertyID p_ID, uint32_t& p_Val);
         bool GetUINT8(PropertyID p_ID, uint8_t& p_Val);
