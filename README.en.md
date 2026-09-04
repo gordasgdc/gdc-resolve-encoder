@@ -1,6 +1,6 @@
 # GDC Resolve Encoder
 
-Native, open-source encoder for DaVinci Resolve Studio — H.264 and H.265 via FFmpeg, with automatic hardware acceleration (Apple VideoToolbox on Mac, NVIDIA NVENC on Windows/Linux), plus 8-bit and 10-bit variants.
+Native, open-source encoder for DaVinci Resolve Studio — H.264 and H.265 via FFmpeg, with automatic hardware acceleration (Apple VideoToolbox on Mac, NVIDIA NVENC on Windows), plus 8-bit and 10-bit variants.
 
 **Presentation page**: https://gordasgdc.github.io/gdc-resolve-encoder/
 **Română**: [README.md](README.md) · **Español**: [README.es.md](README.es.md)
@@ -15,14 +15,14 @@ Every archive in [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/rel
 
 | Codec | Backend | Type | Depth | Platforms |
 |---|---|---|---|---|
-| GDC H.264 | `libx264` | Software | 8-bit | Mac · Windows · Linux |
-| GDC H.265 | `libx265` | Software | 8-bit | Mac · Windows · Linux |
+| GDC H.264 | `libx264` | Software | 8-bit | Mac · Windows |
+| GDC H.265 | `libx265` | Software | 8-bit | Mac · Windows |
 | GDC H.264 | Apple VideoToolbox | Hardware | 8-bit | Mac (Apple Silicon) |
 | GDC H.265 | Apple VideoToolbox | Hardware | 8-bit | Mac (Apple Silicon) |
-| GDC H.264 | NVIDIA NVENC | Hardware | 8-bit | Windows · Linux (NVIDIA GPU) |
-| GDC H.265 | NVIDIA NVENC | Hardware | 8-bit | Windows · Linux (NVIDIA GPU) |
-| GDC H.264 10-bit | `libx264` (High10) | Software | 10-bit | Mac · Windows · Linux |
-| GDC H.265 10-bit | `libx265` (Main10) | Software | 10-bit | Mac · Windows · Linux |
+| GDC H.264 | NVIDIA NVENC | Hardware | 8-bit | Windows (NVIDIA GPU) |
+| GDC H.265 | NVIDIA NVENC | Hardware | 8-bit | Windows (NVIDIA GPU) |
+| GDC H.264 10-bit | `libx264` (High10) | Software | 10-bit | Mac · Windows |
+| GDC H.265 10-bit | `libx265` (Main10) | Software | 10-bit | Mac · Windows |
 
 Hardware variants only show up in Resolve's codec list if your machine can actually run them — FFmpeg is checked at plugin startup, not assumed. 10-bit is currently software-only.
 
@@ -30,7 +30,10 @@ Hardware variants only show up in Resolve's codec list if your machine can actua
 
 - **Preset** — speed vs compression efficiency (ultrafast → veryslow)
 - **Rate Control** — Constant Quality (CRF), Target Bitrate, or Constant QP
-- **Profile** — baseline/main/high/high422 (H.264 8-bit software only)
+- **Profile** — baseline/main/high (H.264 8-bit software only)
+- **Level** — 3.0-5.2 or Auto (H.264/H.265 software)
+- **Keyframe Interval** — distance between keyframes, in seconds
+- **Advanced Params** — direct x264/x265 expert parameters, e.g. `aq-mode=3:psy-rd=1.0,0.15`
 - **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (the list differs slightly between H.264 and H.265, verified directly against each encoder)
 
 Every setting, with concrete examples of when and how to use it, is explained in detail in the PDF guide.
@@ -39,7 +42,7 @@ Every setting, with concrete examples of when and how to use it, is explained in
 
 Download the archive for your platform from [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest).
 
-> **About FFmpeg**: the plugin doesn't bundle FFmpeg (large size, GPL/LGPL licensing complications). On **Mac and Linux**, you need FFmpeg installed separately on the system. On **Windows**, the required libraries already ship in the archive — nothing extra to install.
+> **About FFmpeg**: the plugin doesn't bundle FFmpeg (large size, GPL/LGPL licensing complications). On **Mac**, you need FFmpeg installed separately on the system. On **Windows**, the required libraries already ship in the archive — nothing extra to install.
 
 ### macOS (Apple Silicon)
 
@@ -64,26 +67,13 @@ mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Desi
 
 No separate FFmpeg needed — the required DLLs already ship in the archive.
 
-Move the whole `gdc_resolve_encoder.dvcp.bundle` folder (the folder itself, not just the file inside) to:
+Easiest way: in the unzipped folder, run `install.bat` (double-click) — it places the bundle in the right folder for you, requesting Administrator rights automatically if needed.
+
+Manual, if you prefer: move the whole `gdc_resolve_encoder.dvcp.bundle` folder (the folder itself, not just the file inside) to:
 ```
 %ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\
 ```
 
-### Linux
-
-Install FFmpeg via your distribution's package manager, e.g.:
-```bash
-sudo apt install ffmpeg        # Debian/Ubuntu
-sudo dnf install ffmpeg        # Fedora
-sudo pacman -S ffmpeg          # Arch
-```
-
-Then move the bundle to:
-```
-/opt/resolve/IOPlugins/
-```
-
-Restart Resolve after installing.
 
 ## How to use it
 
@@ -95,8 +85,8 @@ Restart Resolve after installing.
 ## Requirements
 
 - **DaVinci Resolve Studio** (the free edition doesn't support IOPlugins)
-- **macOS Apple Silicon**, Windows 64-bit, or Linux — Intel Macs aren't supported
-- **FFmpeg installed on the system** — Mac/Linux (Windows has the DLLs included in the archive)
+- **macOS Apple Silicon** or Windows 64-bit — Intel Macs aren't supported
+- **FFmpeg installed on the system** — Mac (Windows has the DLLs included in the archive)
 - For NVENC: an **NVIDIA** GPU with an up-to-date driver
 
 ## Correct bundle structure
@@ -106,9 +96,7 @@ gdc_resolve_encoder.dvcp.bundle/
 └── Contents/
     ├── MacOS/              (Mac only)
     │   └── gdc_resolve_encoder.dvcp
-    ├── Win64/               (Windows only)
-    │   └── gdc_resolve_encoder.dvcp
-    └── Linux-x86-64/        (Linux only)
+    └── Win64/               (Windows only)
         └── gdc_resolve_encoder.dvcp
 ```
 
@@ -119,11 +107,6 @@ Every archive on [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/rel
 See [`.github/workflows/build.yml`](.github/workflows/build.yml) for the exact steps used for each release; summary:
 
 ```bash
-# Linux
-sudo apt-get install cmake pkg-config libavcodec-dev libavutil-dev libswscale-dev
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
-
 # macOS (arm64 only)
 brew install cmake pkg-config ffmpeg
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
