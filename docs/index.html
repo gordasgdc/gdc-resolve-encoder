@@ -9,7 +9,7 @@
   }
 </script>
 <title>GDC Resolve Encoder</title>
-<meta name="description" content="Encoder open-source pentru DaVinci Resolve Studio — H.264/H.265 prin FFmpeg, cu accelerare hardware automată pe Mac, Windows și Linux.">
+<meta name="description" content="Encoder open-source pentru DaVinci Resolve Studio — H.264/H.265 prin FFmpeg, cu accelerare hardware automată pe Mac și Windows.">
 <link rel="icon" href="data:,">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -231,14 +231,13 @@
     <div>
       <div class="eyebrow" data-i18n="hero.eyebrow">IOPlugin pentru DaVinci Resolve Studio</div>
       <h1 data-i18n="hero.title">Un encoder <span class="accent">nativ, open-source</span>, pentru export din Resolve</h1>
-      <p class="lead" data-i18n="hero.lead">H.264 și H.265 prin FFmpeg, cu accelerare hardware automată — VideoToolbox pe Mac, NVENC pe Windows/Linux — fără să alegi tu ce backend să folosești.</p>
+      <p class="lead" data-i18n="hero.lead">H.264 și H.265 prin FFmpeg, cu accelerare hardware automată — VideoToolbox pe Mac, NVENC pe Windows — fără să alegi tu ce backend să folosești.</p>
       <div class="hero-actions">
-        <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/gdc-resolve-encoder-mac-arm64.zip" class="btn btn-primary">↓ macOS (arm64)</a>
+        <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/GDCResolveEncoder.pkg" class="btn btn-primary">↓ macOS (arm64)</a>
         <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/gdc-resolve-encoder-windows-x64.zip" class="btn btn-primary">↓ Windows (x64)</a>
-        <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/gdc-resolve-encoder-linux-x64.zip" class="btn btn-primary">↓ Linux (x64)</a>
       </div>
       <div class="hero-meta">
-        <span><span class="dot"></span> <span data-i18n="hero.meta_platforms">Mac (arm64) · Windows · Linux</span></span>
+        <span><span class="dot"></span> <span data-i18n="hero.meta_platforms">Mac (arm64) · Windows</span></span>
         <span data-i18n="hero.meta_license">Licență MIT</span>
       </div>
     </div>
@@ -294,12 +293,12 @@
           </tr>
         </thead>
         <tbody>
-          <tr><td>GDC H.264</td><td class="plat-chip">libx264</td><td><span class="badge badge-cpu" data-i18n="codecs.cpu">Software</span></td><td class="plat-chip">Mac · Windows · Linux</td></tr>
-          <tr><td>GDC H.265</td><td class="plat-chip">libx265</td><td><span class="badge badge-cpu" data-i18n="codecs.cpu">Software</span></td><td class="plat-chip">Mac · Windows · Linux</td></tr>
+          <tr><td>GDC H.264</td><td class="plat-chip">libx264</td><td><span class="badge badge-cpu" data-i18n="codecs.cpu">Software</span></td><td class="plat-chip">Mac · Windows</td></tr>
+          <tr><td>GDC H.265</td><td class="plat-chip">libx265</td><td><span class="badge badge-cpu" data-i18n="codecs.cpu">Software</span></td><td class="plat-chip">Mac · Windows</td></tr>
           <tr><td>GDC H.264</td><td class="plat-chip">VideoToolbox</td><td><span class="badge badge-hw" data-i18n="codecs.hw">Hardware</span></td><td class="plat-chip">Mac (Apple Silicon)</td></tr>
           <tr><td>GDC H.265</td><td class="plat-chip">VideoToolbox</td><td><span class="badge badge-hw" data-i18n="codecs.hw">Hardware</span></td><td class="plat-chip">Mac (Apple Silicon)</td></tr>
-          <tr><td>GDC H.264</td><td class="plat-chip">NVENC</td><td><span class="badge badge-hw" data-i18n="codecs.hw">Hardware</span></td><td class="plat-chip">Windows · Linux (NVIDIA)</td></tr>
-          <tr><td>GDC H.265</td><td class="plat-chip">NVENC</td><td><span class="badge badge-hw" data-i18n="codecs.hw">Hardware</span></td><td class="plat-chip">Windows · Linux (NVIDIA)</td></tr>
+          <tr><td>GDC H.264</td><td class="plat-chip">NVENC</td><td><span class="badge badge-hw" data-i18n="codecs.hw">Hardware</span></td><td class="plat-chip">Windows (NVIDIA)</td></tr>
+          <tr><td>GDC H.265</td><td class="plat-chip">NVENC</td><td><span class="badge badge-hw" data-i18n="codecs.hw">Hardware</span></td><td class="plat-chip">Windows (NVIDIA)</td></tr>
         </tbody>
       </table>
     </div>
@@ -365,7 +364,6 @@
       <div class="tabs">
         <button class="tab-btn active" data-tab="mac">macOS</button>
         <button class="tab-btn" data-tab="win">Windows</button>
-        <button class="tab-btn" data-tab="linux">Linux</button>
       </div>
 
       <div class="tab-panel active" data-panel="mac">
@@ -373,32 +371,22 @@
           <div class="step">
             <div class="step-num"></div>
             <div class="step-body">
-              <h4 data-i18n="install.mac.s0_title">Instalează FFmpeg</h4>
-              <p data-i18n="install.mac.s0_desc">Plugin-ul se leagă la FFmpeg-ul din sistem — nu e inclus în arhivă. Sari peste acest pas dacă îl ai deja instalat.</p>
-              <pre>brew install ffmpeg</pre>
+              <h4 data-i18n="install.mac.s0_title">Rulează instalatorul</h4>
+              <p data-i18n="install.mac.s0_desc">Deschide fișierul .pkg descărcat și dă dublu-clic — e semnat și notarizat de Apple, deci macOS îl acceptă direct, fără avertismente.</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num"></div>
             <div class="step-body">
-              <h4 data-i18n="install.mac.s1_title">Elimină carantina</h4>
-              <p data-i18n="install.mac.s1_desc">Binarul nu e notarizat de Apple — fără acest pas, macOS îl blochează și spune că e „deteriorat".</p>
-              <pre>xattr -rd com.apple.quarantine gdc_resolve_encoder.dvcp.bundle</pre>
+              <h4 data-i18n="install.mac.s1_title">Acceptă licența</h4>
+              <p data-i18n="install.mac.s1_desc">Instalatorul îți arată termenii — apasă „Continue" apoi „Agree".</p>
             </div>
           </div>
           <div class="step">
             <div class="step-num"></div>
             <div class="step-body">
-              <h4 data-i18n="install.mac.s2_title">Copiază bundle-ul</h4>
-              <p data-i18n="install.mac.s2_desc">Mută folderul complet <code>.dvcp.bundle</code> (nu doar fișierul din interior) în:</p>
-              <pre>/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/</pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num"></div>
-            <div class="step-body">
-              <h4 data-i18n="install.mac.s3_title">Repornește Resolve</h4>
-              <p data-i18n="install.mac.s3_desc">Codecurile GDC apar în lista de format-uri MP4/QuickTime de pe pagina Deliver.</p>
+              <h4 data-i18n="install.mac.s2_title">Repornește Resolve</h4>
+              <p data-i18n="install.mac.s2_desc">Codecurile GDC apar în lista de format-uri MP4/QuickTime de pe pagina Deliver.</p>
             </div>
           </div>
         </div>
@@ -432,42 +420,6 @@
         </div>
       </div>
 
-      <div class="tab-panel" data-panel="linux">
-        <div class="steps">
-          <div class="step">
-            <div class="step-num"></div>
-            <div class="step-body">
-              <h4 data-i18n="install.linux.s0_title">Instalează FFmpeg</h4>
-              <p data-i18n="install.linux.s0_desc">Plugin-ul se leagă la FFmpeg-ul din sistem — nu e inclus în arhivă.</p>
-              <pre>sudo apt install ffmpeg<span class="c-muted">   # Debian/Ubuntu</span>
-sudo dnf install ffmpeg<span class="c-muted">   # Fedora</span>
-sudo pacman -S ffmpeg<span class="c-muted">     # Arch</span></pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num"></div>
-            <div class="step-body">
-              <h4 data-i18n="install.linux.s1_title">Dezarhivează</h4>
-              <p data-i18n="install.linux.s1_desc">Extrage arhiva descărcată — vei obține folderul <code>gdc_resolve_encoder.dvcp.bundle</code>.</p>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num"></div>
-            <div class="step-body">
-              <h4 data-i18n="install.linux.s2_title">Copiază bundle-ul</h4>
-              <p data-i18n="install.linux.s2_desc">Mută folderul complet în:</p>
-              <pre>/opt/resolve/IOPlugins/</pre>
-            </div>
-          </div>
-          <div class="step">
-            <div class="step-num"></div>
-            <div class="step-body">
-              <h4 data-i18n="install.linux.s3_title">Repornește Resolve</h4>
-              <p data-i18n="install.linux.s3_desc">Codecurile GDC apar în lista de format-uri MP4/QuickTime de pe pagina Deliver.</p>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
   </div>
 </section>
@@ -539,7 +491,7 @@ sudo pacman -S ffmpeg<span class="c-muted">     # Arch</span></pre>
       <h2 data-i18n="tsh.title">Probleme frecvente</h2>
     </div>
     <ul class="req-list reveal" style="grid-template-columns:1fr;">
-      <li><span class="ic">▸</span><span data-i18n="tsh.item1"><strong>Codec-ul nu apare în listă:</strong> ai repornit complet Resolve după instalare? Pe Mac, ai rulat install.sh sau ai eliminat manual carantina?</span></li>
+      <li><span class="ic">▸</span><span data-i18n="tsh.item1"><strong>Codec-ul nu apare în listă:</strong> ai repornit complet Resolve după instalare? Pe Mac, ai rulat instalatorul .pkg (sau install.sh)?</span></li>
       <li><span class="ic">▸</span><span data-i18n="tsh.item2"><strong>Randarea eșuează imediat:</strong> încearcă o rezoluție standard (1920x1080) ca test și verifică spațiul liber pe disc.</span></li>
       <li><span class="ic">▸</span><span data-i18n="tsh.item3"><strong>Fișierul are doar audio, fără video:</strong> actualizează la ultima versiune — a fost o problemă cunoscută, deja rezolvată.</span></li>
       <li><span class="ic">▸</span><span data-i18n="tsh.item4"><strong>Export foarte lent:</strong> încearcă un preset mai rapid (medium/fast) sau varianta hardware, dacă e disponibilă.</span></li>
@@ -556,9 +508,9 @@ sudo pacman -S ffmpeg<span class="c-muted">     # Arch</span></pre>
     </div>
     <ul class="req-list reveal">
       <li><span class="ic">▸</span><span data-i18n="req.item1"><strong>DaVinci Resolve Studio</strong> — versiunea gratuită nu suportă IOPlugins.</span></li>
-      <li><span class="ic">▸</span><span data-i18n="req.item2"><strong>macOS Apple Silicon</strong>, Windows 64-bit, sau Linux — Mac Intel nu e suportat.</span></li>
+      <li><span class="ic">▸</span><span data-i18n="req.item2"><strong>macOS Apple Silicon</strong> sau Windows 64-bit — Mac Intel nu e suportat.</span></li>
       <li><span class="ic">▸</span><span data-i18n="req.item3">Pentru NVENC: <strong>placă video NVIDIA</strong> cu driver actualizat.</span></li>
-      <li><span class="ic">▸</span><span data-i18n="req.item4"><strong>FFmpeg instalat separat</strong> pe Mac/Linux (<code>brew install ffmpeg</code> / <code>apt install ffmpeg</code>) — pe Windows, DLL-urile necesare vin deja incluse în arhivă.</span></li>
+      <li><span class="ic">▸</span><span data-i18n="req.item4"><strong>FFmpeg instalat separat</strong> pe Mac (<code>brew install ffmpeg</code>) — pe Windows, DLL-urile necesare vin deja incluse în arhivă.</span></li>
     </ul>
   </div>
 </section>
@@ -588,9 +540,8 @@ sudo pacman -S ffmpeg<span class="c-muted">     # Arch</span></pre>
       <h2 data-i18n="dl.title">Descarcă GDC Resolve Encoder</h2>
       <p data-i18n="dl.desc">Open-source, sub licență MIT.</p>
       <div class="platform-links">
-        <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/gdc-resolve-encoder-mac-arm64.zip" class="btn btn-primary">macOS (arm64)</a>
+        <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/GDCResolveEncoder.pkg" class="btn btn-primary">macOS (arm64)</a>
         <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/gdc-resolve-encoder-windows-x64.zip" class="btn btn-primary">Windows (x64)</a>
-        <a href="https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest/download/gdc-resolve-encoder-linux-x64.zip" class="btn btn-primary">Linux (x64)</a>
       </div>
       <p style="color:var(--muted);font-size:13px;margin-top:18px;" data-i18n="dl.pdf_note">Fiecare arhivă include și ghidul complet PDF, în română, engleză și spaniolă.</p>
     </div>
@@ -637,9 +588,9 @@ const translations = {
     "nav.about":"Despre","nav.codecs":"Codecuri","nav.install":"Instalare","nav.download":"Descarcă",
     "hero.eyebrow":"IOPlugin pentru DaVinci Resolve Studio",
     "hero.title":'Un encoder <span class="accent">nativ, open-source</span>, pentru export din Resolve',
-    "hero.lead":"H.264 și H.265 prin FFmpeg, cu accelerare hardware automată — VideoToolbox pe Mac, NVENC pe Windows/Linux — fără să alegi tu ce backend să folosești.",
+    "hero.lead":"H.264 și H.265 prin FFmpeg, cu accelerare hardware automată — VideoToolbox pe Mac, NVENC pe Windows — fără să alegi tu ce backend să folosești.",
     "hero.cta_source":"Vezi codul sursă",
-    "hero.meta_platforms":"Mac (arm64) · Windows · Linux","hero.meta_license":"Licență MIT",
+    "hero.meta_platforms":"Mac (arm64) · Windows","hero.meta_license":"Licență MIT",
     "about.tag":"Despre","about.title":"Un singur binar, mai multe backend-uri",
     "about.desc":"O singură clasă de encoder generică citește un tabel de variante și alege automat cel mai bun backend disponibil pe mașina pe care rulează — fără build-uri separate pentru fiecare configurație.",
     "about.card1_title":"Detectare automată",
@@ -654,27 +605,22 @@ const translations = {
     "codecs.cpu":"Software","codecs.hw":"Hardware",
     "install.tag":"Instalare","install.title":"Pune plugin-ul la locul lui",
     "install.desc":"Descarcă arhiva pentru platforma ta din Releases, dezarhiveaz-o, apoi urmează pașii de mai jos.",
-    "install.mac.s0_title":"Instalează FFmpeg","install.mac.s0_desc":"Plugin-ul se leagă la FFmpeg-ul din sistem — nu e inclus în arhivă. Sari peste acest pas dacă îl ai deja instalat.",
-    "install.mac.s1_title":"Elimină carantina","install.mac.s1_desc":"Binarul nu e notarizat de Apple — fără acest pas, macOS îl blochează și spune că e „deteriorat\".",
-    "install.mac.s2_title":"Copiază bundle-ul","install.mac.s2_desc":"Mută folderul complet .dvcp.bundle (nu doar fișierul din interior) în:",
-    "install.mac.s3_title":"Repornește Resolve","install.mac.s3_desc":"Codecurile GDC apar în lista de format-uri MP4/QuickTime de pe pagina Deliver.",
+    "install.mac.s0_title":"Rulează instalatorul","install.mac.s0_desc":"Deschide fișierul .pkg descărcat și dă dublu-clic — e semnat și notarizat de Apple, deci macOS îl acceptă direct, fără avertismente.",
+    "install.mac.s1_title":"Acceptă licența","install.mac.s1_desc":"Instalatorul îți arată termenii — apasă „Continue\" apoi „Agree\".",
+    "install.mac.s2_title":"Repornește Resolve","install.mac.s2_desc":"Codecurile GDC apar în lista de format-uri MP4/QuickTime de pe pagina Deliver.",
     "install.win.note":"Nu ai nevoie de FFmpeg separat — DLL-urile necesare vin deja incluse în arhivă.",
     "install.win.s1_title":"Dezarhivează","install.win.s1_desc":"Extrage arhiva descărcată — vei obține folderul gdc_resolve_encoder.dvcp.bundle.",
     "install.win.s2_title":"Copiază bundle-ul","install.win.s2_desc":"Mută folderul complet în:",
     "install.win.s3_title":"Repornește Resolve","install.win.s3_desc":"Codecurile GDC apar în lista de format-uri MP4/QuickTime de pe pagina Deliver.",
-    "install.linux.s0_title":"Instalează FFmpeg","install.linux.s0_desc":"Plugin-ul se leagă la FFmpeg-ul din sistem — nu e inclus în arhivă.",
-    "install.linux.s1_title":"Dezarhivează","install.linux.s1_desc":"Extrage arhiva descărcată — vei obține folderul gdc_resolve_encoder.dvcp.bundle.",
-    "install.linux.s2_title":"Copiază bundle-ul","install.linux.s2_desc":"Mută folderul complet în:",
-    "install.linux.s3_title":"Repornește Resolve","install.linux.s3_desc":"Codecurile GDC apar în lista de format-uri MP4/QuickTime de pe pagina Deliver.",
     "usage.tag":"Utilizare","usage.title":"Cum îl folosești",
     "usage.s1_title":"Deschide pagina Deliver","usage.s1_desc":"În proiectul tău din Resolve, mergi la pagina Deliver, ca pentru orice export normal.",
     "usage.s2_title":"Alege formatul MP4 sau QuickTime","usage.s2_desc":"Codecurile GDC apar în lista de codecuri, alături de cele native ale Resolve.",
     "usage.s3_title":"Alege un codec GDC și exportă","usage.s3_desc":"Setările de calitate (CRF sau bitrate țintă) apar direct în panoul de export.",
     "req.tag":"Cerințe","req.title":"Ce ai nevoie",
     "req.item1":"<strong>DaVinci Resolve Studio</strong> — versiunea gratuită nu suportă IOPlugins.",
-    "req.item2":"<strong>macOS Apple Silicon</strong>, Windows 64-bit, sau Linux — Mac Intel nu e suportat.",
+    "req.item2":"<strong>macOS Apple Silicon</strong> sau Windows 64-bit — Mac Intel nu e suportat.",
     "req.item3":"Pentru NVENC: <strong>placă video NVIDIA</strong> cu driver actualizat.",
-    "req.item4":"<strong>FFmpeg instalat separat</strong> pe Mac/Linux (brew install ffmpeg / apt install ffmpeg) — pe Windows, DLL-urile necesare vin deja incluse în arhivă.",
+    "req.item4":"<strong>FFmpeg instalat separat</strong> pe Mac (brew install ffmpeg) — pe Windows, DLL-urile necesare vin deja incluse în arhivă.",
     "dl.title":"Descarcă GDC Resolve Encoder","dl.desc":"Open-source, sub licență MIT.",
     "dl.pdf_note":"Fiecare arhivă include și ghidul complet PDF, în română, engleză și spaniolă.",
     "act.tag":"Activare","act.title":"Cod de activare",
@@ -715,7 +661,7 @@ const translations = {
     "recipes.r4_h":"Arhivare / master",
     "recipes.r4_desc":"H.265 Software 10-bit · Preset <strong>slow/veryslow</strong> · CRF <strong>16-18</strong>",
     "tsh.tag":"Depanare","tsh.title":"Probleme frecvente",
-    "tsh.item1":"<strong>Codec-ul nu apare în listă:</strong> ai repornit complet Resolve după instalare? Pe Mac, ai rulat install.sh sau ai eliminat manual carantina?",
+    "tsh.item1":"<strong>Codec-ul nu apare în listă:</strong> ai repornit complet Resolve după instalare? Pe Mac, ai rulat instalatorul .pkg (sau install.sh)?",
     "tsh.item2":"<strong>Randarea eșuează imediat:</strong> încearcă o rezoluție standard (1920x1080) ca test și verifică spațiul liber pe disc.",
     "tsh.item3":"<strong>Fișierul are doar audio, fără video:</strong> actualizează la ultima versiune — a fost o problemă cunoscută, deja rezolvată.",
     "tsh.item4":"<strong>Export foarte lent:</strong> încearcă un preset mai rapid (medium/fast) sau varianta hardware, dacă e disponibilă.",
@@ -729,9 +675,9 @@ const translations = {
     "nav.about":"About","nav.codecs":"Codecs","nav.install":"Install","nav.download":"Download",
     "hero.eyebrow":"IOPlugin for DaVinci Resolve Studio",
     "hero.title":'A <span class="accent">native, open-source</span> encoder for Resolve exports',
-    "hero.lead":"H.264 and H.265 via FFmpeg, with automatic hardware acceleration — VideoToolbox on Mac, NVENC on Windows/Linux — without you having to pick the backend.",
+    "hero.lead":"H.264 and H.265 via FFmpeg, with automatic hardware acceleration — VideoToolbox on Mac, NVENC on Windows — without you having to pick the backend.",
     "hero.cta_source":"View source code",
-    "hero.meta_platforms":"Mac (arm64) · Windows · Linux","hero.meta_license":"MIT License",
+    "hero.meta_platforms":"Mac (arm64) · Windows","hero.meta_license":"MIT License",
     "about.tag":"About","about.title":"One binary, several backends",
     "about.desc":"A single generic encoder class reads a table of variants and automatically picks the best backend available on the machine it's running on — no separate builds per configuration.",
     "about.card1_title":"Automatic detection",
@@ -746,27 +692,22 @@ const translations = {
     "codecs.cpu":"Software","codecs.hw":"Hardware",
     "install.tag":"Installation","install.title":"Put the plugin where it belongs",
     "install.desc":"Download the archive for your platform from Releases, unzip it, then follow the steps below.",
-    "install.mac.s0_title":"Install FFmpeg","install.mac.s0_desc":"The plugin links against the system's FFmpeg — it isn't bundled in the archive. Skip this step if you already have it installed.",
-    "install.mac.s1_title":"Remove quarantine","install.mac.s1_desc":"The binary isn't notarized by Apple — without this step, macOS blocks it and says it's damaged.",
-    "install.mac.s2_title":"Copy the bundle","install.mac.s2_desc":"Move the whole .dvcp.bundle folder (not just the file inside it) to:",
-    "install.mac.s3_title":"Restart Resolve","install.mac.s3_desc":"The GDC codecs show up in the MP4/QuickTime format list on the Deliver page.",
+    "install.mac.s0_title":"Run the installer","install.mac.s0_desc":"Open the downloaded .pkg and double-click it — it's signed and notarized by Apple, so macOS accepts it directly, no warnings.",
+    "install.mac.s1_title":"Accept the license","install.mac.s1_desc":"The installer shows you the terms — click \"Continue\" then \"Agree\".",
+    "install.mac.s2_title":"Restart Resolve","install.mac.s2_desc":"The GDC codecs show up in the MP4/QuickTime format list on the Deliver page.",
     "install.win.note":"No separate FFmpeg install needed — the required DLLs already ship in the archive.",
     "install.win.s1_title":"Unzip","install.win.s1_desc":"Extract the downloaded archive — you'll get the gdc_resolve_encoder.dvcp.bundle folder.",
     "install.win.s2_title":"Copy the bundle","install.win.s2_desc":"Move the whole folder to:",
     "install.win.s3_title":"Restart Resolve","install.win.s3_desc":"The GDC codecs show up in the MP4/QuickTime format list on the Deliver page.",
-    "install.linux.s0_title":"Install FFmpeg","install.linux.s0_desc":"The plugin links against the system's FFmpeg — it isn't bundled in the archive.",
-    "install.linux.s1_title":"Unzip","install.linux.s1_desc":"Extract the downloaded archive — you'll get the gdc_resolve_encoder.dvcp.bundle folder.",
-    "install.linux.s2_title":"Copy the bundle","install.linux.s2_desc":"Move the whole folder to:",
-    "install.linux.s3_title":"Restart Resolve","install.linux.s3_desc":"The GDC codecs show up in the MP4/QuickTime format list on the Deliver page.",
     "usage.tag":"Usage","usage.title":"How to use it",
     "usage.s1_title":"Open the Deliver page","usage.s1_desc":"In your Resolve project, go to the Deliver page, same as any normal export.",
     "usage.s2_title":"Pick MP4 or QuickTime format","usage.s2_desc":"The GDC codecs appear in the codec list, alongside Resolve's own.",
     "usage.s3_title":"Pick a GDC codec and export","usage.s3_desc":"Quality settings (CRF or target bitrate) show up directly in the export panel.",
     "req.tag":"Requirements","req.title":"What you need",
     "req.item1":"<strong>DaVinci Resolve Studio</strong> — the free edition doesn't support IOPlugins.",
-    "req.item2":"<strong>macOS Apple Silicon</strong>, Windows 64-bit, or Linux — Intel Macs aren't supported.",
+    "req.item2":"<strong>macOS Apple Silicon</strong> or Windows 64-bit — Intel Macs aren't supported.",
     "req.item3":"For NVENC: an <strong>NVIDIA GPU</strong> with an up-to-date driver.",
-    "req.item4":"<strong>FFmpeg installed separately</strong> on Mac/Linux (brew install ffmpeg / apt install ffmpeg) — on Windows, the required DLLs already ship in the archive.",
+    "req.item4":"<strong>FFmpeg installed separately</strong> on Mac (brew install ffmpeg) — on Windows, the required DLLs already ship in the archive.",
     "dl.title":"Download GDC Resolve Encoder","dl.desc":"Open-source, MIT licensed.",
     "dl.pdf_note":"Every archive also includes the full PDF guide, in Romanian, English, and Spanish.",
     "act.tag":"Activation","act.title":"Activation code",
@@ -807,7 +748,7 @@ const translations = {
     "recipes.r4_h":"Archival / master",
     "recipes.r4_desc":"H.265 Software 10-bit · Preset <strong>slow/veryslow</strong> · CRF <strong>16-18</strong>",
     "tsh.tag":"Troubleshooting","tsh.title":"Common issues",
-    "tsh.item1":"<strong>The codec doesn't show up:</strong> did you fully restart Resolve after installing? On Mac, did you run install.sh or manually remove the quarantine?",
+    "tsh.item1":"<strong>The codec doesn't show up:</strong> did you fully restart Resolve after installing? On Mac, did you run the .pkg installer (or install.sh)?",
     "tsh.item2":"<strong>Rendering fails immediately:</strong> try a standard resolution (1920x1080) as a test and check free disk space.",
     "tsh.item3":"<strong>The file has audio only, no video:</strong> update to the latest version — this was a known issue, already fixed.",
     "tsh.item4":"<strong>Export is very slow:</strong> try a faster preset (medium/fast) or the hardware variant, if available.",
@@ -821,9 +762,9 @@ const translations = {
     "nav.about":"Acerca de","nav.codecs":"Códecs","nav.install":"Instalación","nav.download":"Descargar",
     "hero.eyebrow":"IOPlugin para DaVinci Resolve Studio",
     "hero.title":'Un códec <span class="accent">nativo y de código abierto</span> para exportar desde Resolve',
-    "hero.lead":"H.264 y H.265 mediante FFmpeg, con aceleración por hardware automática — VideoToolbox en Mac, NVENC en Windows/Linux — sin que tengas que elegir el backend.",
+    "hero.lead":"H.264 y H.265 mediante FFmpeg, con aceleración por hardware automática — VideoToolbox en Mac, NVENC en Windows — sin que tengas que elegir el backend.",
     "hero.cta_source":"Ver código fuente",
-    "hero.meta_platforms":"Mac (arm64) · Windows · Linux","hero.meta_license":"Licencia MIT",
+    "hero.meta_platforms":"Mac (arm64) · Windows","hero.meta_license":"Licencia MIT",
     "about.tag":"Acerca de","about.title":"Un solo binario, varios backends",
     "about.desc":"Una única clase de codificador genérica lee una tabla de variantes y elige automáticamente el mejor backend disponible en la máquina donde se ejecuta — sin builds separados por configuración.",
     "about.card1_title":"Detección automática",
@@ -838,27 +779,22 @@ const translations = {
     "codecs.cpu":"Software","codecs.hw":"Hardware",
     "install.tag":"Instalación","install.title":"Coloca el plugin donde corresponde",
     "install.desc":"Descarga el archivo para tu plataforma desde Releases, descomprímelo y sigue los pasos siguientes.",
-    "install.mac.s0_title":"Instala FFmpeg","install.mac.s0_desc":"El plugin se enlaza al FFmpeg del sistema — no viene incluido en el archivo. Omite este paso si ya lo tienes instalado.",
-    "install.mac.s1_title":"Quita la cuarentena","install.mac.s1_desc":"El binario no está notarizado por Apple — sin este paso, macOS lo bloquea y dice que está dañado.",
-    "install.mac.s2_title":"Copia el bundle","install.mac.s2_desc":"Mueve la carpeta completa .dvcp.bundle (no solo el archivo interior) a:",
-    "install.mac.s3_title":"Reinicia Resolve","install.mac.s3_desc":"Los códecs GDC aparecen en la lista de formatos MP4/QuickTime en la página Deliver.",
+    "install.mac.s0_title":"Ejecuta el instalador","install.mac.s0_desc":"Abre el .pkg descargado y haz doble clic — está firmado y notarizado por Apple, así que macOS lo acepta directamente, sin avisos.",
+    "install.mac.s1_title":"Acepta la licencia","install.mac.s1_desc":"El instalador te muestra los términos — pulsa \"Continue\" y luego \"Agree\".",
+    "install.mac.s2_title":"Reinicia Resolve","install.mac.s2_desc":"Los códecs GDC aparecen en la lista de formatos MP4/QuickTime en la página Deliver.",
     "install.win.note":"No hace falta instalar FFmpeg por separado — los DLL necesarios ya vienen en el archivo.",
     "install.win.s1_title":"Descomprime","install.win.s1_desc":"Extrae el archivo descargado — obtendrás la carpeta gdc_resolve_encoder.dvcp.bundle.",
     "install.win.s2_title":"Copia el bundle","install.win.s2_desc":"Mueve la carpeta completa a:",
     "install.win.s3_title":"Reinicia Resolve","install.win.s3_desc":"Los códecs GDC aparecen en la lista de formatos MP4/QuickTime en la página Deliver.",
-    "install.linux.s0_title":"Instala FFmpeg","install.linux.s0_desc":"El plugin se enlaza al FFmpeg del sistema — no viene incluido en el archivo.",
-    "install.linux.s1_title":"Descomprime","install.linux.s1_desc":"Extrae el archivo descargado — obtendrás la carpeta gdc_resolve_encoder.dvcp.bundle.",
-    "install.linux.s2_title":"Copia el bundle","install.linux.s2_desc":"Mueve la carpeta completa a:",
-    "install.linux.s3_title":"Reinicia Resolve","install.linux.s3_desc":"Los códecs GDC aparecen en la lista de formatos MP4/QuickTime en la página Deliver.",
     "usage.tag":"Uso","usage.title":"Cómo usarlo",
     "usage.s1_title":"Abre la página Deliver","usage.s1_desc":"En tu proyecto de Resolve, ve a la página Deliver, como en cualquier exportación normal.",
     "usage.s2_title":"Elige el formato MP4 o QuickTime","usage.s2_desc":"Los códecs GDC aparecen en la lista de códecs, junto a los nativos de Resolve.",
     "usage.s3_title":"Elige un códec GDC y exporta","usage.s3_desc":"Los ajustes de calidad (CRF o bitrate objetivo) aparecen directamente en el panel de exportación.",
     "req.tag":"Requisitos","req.title":"Qué necesitas",
     "req.item1":"<strong>DaVinci Resolve Studio</strong> — la edición gratuita no soporta IOPlugins.",
-    "req.item2":"<strong>macOS Apple Silicon</strong>, Windows de 64 bits, o Linux — los Mac Intel no son compatibles.",
+    "req.item2":"<strong>macOS Apple Silicon</strong> o Windows de 64 bits — los Mac Intel no son compatibles.",
     "req.item3":"Para NVENC: una <strong>GPU NVIDIA</strong> con driver actualizado.",
-    "req.item4":"<strong>FFmpeg instalado por separado</strong> en Mac/Linux (brew install ffmpeg / apt install ffmpeg) — en Windows, los DLL necesarios ya vienen incluidos en el archivo.",
+    "req.item4":"<strong>FFmpeg instalado por separado</strong> en Mac (brew install ffmpeg) — en Windows, los DLL necesarios ya vienen incluidos en el archivo.",
     "dl.title":"Descarga GDC Resolve Encoder","dl.desc":"De código abierto, licencia MIT.",
     "dl.pdf_note":"Cada archivo incluye también la guía completa en PDF, en rumano, inglés y español.",
     "act.tag":"Activación","act.title":"Código de activación",
@@ -899,7 +835,7 @@ const translations = {
     "recipes.r4_h":"Archivo / máster",
     "recipes.r4_desc":"H.265 Software 10 bits · Preset <strong>slow/veryslow</strong> · CRF <strong>16-18</strong>",
     "tsh.tag":"Solución de problemas","tsh.title":"Problemas frecuentes",
-    "tsh.item1":"<strong>El códec no aparece:</strong> ¿reiniciaste completamente Resolve después de instalar? En Mac, ¿ejecutaste install.sh o eliminaste manualmente la cuarentena?",
+    "tsh.item1":"<strong>El códec no aparece:</strong> ¿reiniciaste completamente Resolve después de instalar? En Mac, ¿ejecutaste el instalador .pkg (o install.sh)?",
     "tsh.item2":"<strong>El renderizado falla inmediatamente:</strong> prueba con una resolución estándar (1920x1080) y comprueba el espacio libre en disco.",
     "tsh.item3":"<strong>El archivo solo tiene audio, sin vídeo:</strong> actualiza a la última versión — fue un problema conocido, ya solucionado.",
     "tsh.item4":"<strong>La exportación es muy lenta:</strong> prueba un preset más rápido (medium/fast) o la variante por hardware, si está disponible.",
@@ -954,9 +890,7 @@ const treeData = [
   { k: '└─ ', file: 'Contents/', plat: '' },
   { k: '   ├─ ', file: 'MacOS/', plat: '' },
   { k: '   │   └─ ', file: 'gdc_resolve_encoder.dvcp', plat: '  ← arm64' },
-  { k: '   ├─ ', file: 'Win64/', plat: '' },
-  { k: '   │   └─ ', file: 'gdc_resolve_encoder.dvcp', plat: '  ← x64' },
-  { k: '   └─ ', file: 'Linux-x86-64/', plat: '' },
+  { k: '   └─ ', file: 'Win64/', plat: '' },
   { k: '       └─ ', file: 'gdc_resolve_encoder.dvcp', plat: '  ← x64' },
 ];
 const treeContainer = document.getElementById('treeLines');
