@@ -2,6 +2,7 @@
 #include "license_check.h"
 
 #include <cstring>
+#include <cmath>
 #include <vector>
 #include <string>
 #include <thread>
@@ -283,6 +284,9 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_Profile(2) // "high"
     , m_Tune(0)    // "none"
     , m_QP(23)
+    , m_KeyframeIntervalSec(2)
+    , m_Level(0) // "Auto"
+    , m_AdvancedParams("")
     , m_FrameCount(0)
     , m_PacketCount(0)
     , m_TotalBytesSent(0)
@@ -436,6 +440,9 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     int32_t profile = 2;   // index into the H.264 profile list below, default "high"
     int32_t tune = 0;      // index into the tune list below, default "none"
     int32_t qp = 23;
+    int32_t keyframeIntervalSec = 2; // ~48-60 frames at 24-30fps — professional-delivery default, was hardcoded to a flat 12-frame GOP before
+    int32_t level = 0;      // 0 = "Auto" (don't force a Level)
+    std::string advancedParams; // raw x264-params/x265-params passthrough
 
     p_pValues->GetINT32("gdc_quality_mode", qualityMode);
     p_pValues->GetINT32("gdc_crf", crf);
@@ -444,6 +451,9 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     p_pValues->GetINT32("gdc_profile", profile);
     p_pValues->GetINT32("gdc_tune", tune);
     p_pValues->GetINT32("gdc_qp", qp);
+    p_pValues->GetINT32("gdc_keyframe_interval", keyframeIntervalSec);
+    p_pValues->GetINT32("gdc_level", level);
+    p_pValues->GetString("gdc_advanced_params", advancedParams);
 
     {
         HostUIConfigEntryRef brandItem("gdc_brand_label");
@@ -515,10 +525,29 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     if (!pVariant->isHardware && !pVariant->isHEVC && pVariant->bitDepth == 8)
     {
         HostUIConfigEntryRef profileItem("gdc_profile");
-        std::vector<std::string> texts = { "baseline", "main", "high", "high422" };
-        std::vector<int32_t> values = { 0, 1, 2, 3 };
+        // "high422" REMOVED — no registered EncoderVariant ever uses a 4:2:2
+        // pixel format (all are 4:2:0/NV12), so offering it here asked x264
+        // to flag a High 4:2:2 bitstream for 4:2:0 data: misleading at best,
+        // and a plausible real cause of intermittent avcodec_open2 failures
+        // (see CLAUDE.md journal). A real 4:2:2 variant is a separate,
+        // larger addition (needs its own EncoderVariant + AV_PIX_FMT_YUV422P
+        // buffer handling), not done here.
+        std::vector<std::string> texts = { "baseline", "main", "high" };
+        std::vector<int32_t> values = { 0, 1, 2 };
         profileItem.MakeComboBox("Profile", texts, values, profile);
         if (!profileItem.IsSuccess() || !p_pSettingsList->Append(&profileItem))
+        {
+            return errFail;
+        }
+    }
+
+    if (!pVariant->isHardware)
+    {
+        HostUIConfigEntryRef levelItem("gdc_level");
+        std::vector<std::string> texts = { "Auto", "3.0", "3.1", "3.2", "4.0", "4.1", "4.2", "5.0", "5.1", "5.2" };
+        std::vector<int32_t> values = { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 };
+        levelItem.MakeComboBox("Level", texts, values, level);
+        if (!levelItem.IsSuccess() || !p_pSettingsList->Append(&levelItem))
         {
             return errFail;
         }
@@ -582,6 +611,34 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         HostUIConfigEntryRef qpItem("gdc_qp");
         qpItem.MakeSlider("Constant QP", "lower = better", qp, 0, 51, 23);
         if (!qpItem.IsSuccess() || !p_pSettingsList->Append(&qpItem))
+        {
+            return errFail;
+        }
+    }
+
+    {
+        // Was a hardcoded 12-frame GOP (~0.5s at 24-30fps) regardless of
+        // this setting existing — see OpenCodec, where it's now converted
+        // to frames using the REAL source frame rate. 2s is the common
+        // professional-delivery default (MainConcept and most NLEs default
+        // in this range), not an arbitrary round number.
+        HostUIConfigEntryRef gopItem("gdc_keyframe_interval");
+        gopItem.MakeSlider("Keyframe Interval (sec)", "GOP length", keyframeIntervalSec, 1, 10, 2);
+        if (!gopItem.IsSuccess() || !p_pSettingsList->Append(&gopItem))
+        {
+            return errFail;
+        }
+    }
+
+    if (!pVariant->isHardware)
+    {
+        // MainConcept-style "expert" escape hatch: raw x264-params/
+        // x265-params passthrough (psy-rd, aq-mode, ref, deblock, etc.)
+        // without hand-wiring a dedicated slider for every single knob
+        // those encoders expose.
+        HostUIConfigEntryRef advItem("gdc_advanced_params");
+        advItem.MakeTextBox("Advanced Params (x264/x265)", advancedParams, "e.g. aq-mode=3:psy-rd=1.0,0.15");
+        if (!advItem.IsSuccess() || !p_pSettingsList->Append(&advItem))
         {
             return errFail;
         }
@@ -714,6 +771,9 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     p_pBuff->GetINT32("gdc_profile", m_Profile);
     p_pBuff->GetINT32("gdc_tune", m_Tune);
     p_pBuff->GetINT32("gdc_qp", m_QP);
+    p_pBuff->GetINT32("gdc_keyframe_interval", m_KeyframeIntervalSec);
+    p_pBuff->GetINT32("gdc_level", m_Level);
+    p_pBuff->GetString("gdc_advanced_params", m_AdvancedParams);
 
     return OpenCodec(p_pBuff);
 }
@@ -739,11 +799,71 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     m_pCtx->framerate = AVRational{ static_cast<int>(m_CommonProps.GetFrameRateNum()), static_cast<int>(m_CommonProps.GetFrameRateDen()) };
     g_Log(logLevelInfo, "GDC Encoder :: width=%d height=%d frDen=%d frNum=%d",
           m_pCtx->width, m_pCtx->height, static_cast<int>(m_CommonProps.GetFrameRateDen()), static_cast<int>(m_CommonProps.GetFrameRateNum()));
-    m_pCtx->gop_size = 12;
+    // GOP length: was a hardcoded 12 frames (~0.5s at 24-30fps) regardless
+    // of source frame rate — far below the professional-delivery norm of
+    // ~2s, wasting bit-rate on unnecessarily frequent I-frames instead of
+    // spending it on quality. Now derived from the REAL source frame rate
+    // (m_KeyframeIntervalSec is user-configurable, see s_GetEncoderSettings).
+    {
+        double fps = 24.0;
+        if (m_CommonProps.GetFrameRateDen() > 0)
+        {
+            fps = static_cast<double>(m_CommonProps.GetFrameRateNum()) / static_cast<double>(m_CommonProps.GetFrameRateDen());
+        }
+        int gopFrames = static_cast<int>(std::lround(static_cast<double>(m_KeyframeIntervalSec) * fps));
+        m_pCtx->gop_size = (gopFrames > 0) ? gopFrames : 1;
+    }
     m_pCtx->max_b_frames = 2;
     m_pCtx->pix_fmt = m_pVariant->preferredPixFmt;
     m_pCtx->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
     m_pCtx->color_range = m_CommonProps.IsFullRange() ? AVCOL_RANGE_JPEG : AVCOL_RANGE_MPEG;
+
+    // Explicit multi-threading — was left on FFmpeg's implicit default,
+    // fine functionally but unpredictable in how it scales across
+    // machines with many cores. Capped well above any real workstation's
+    // core count purely as a sanity bound, not a meaningful limit.
+    {
+        unsigned int hwThreads = std::thread::hardware_concurrency();
+        m_pCtx->thread_count = static_cast<int>((hwThreads > 0 && hwThreads <= 32) ? hwThreads : (hwThreads > 32 ? 32 : 8));
+    }
+
+    // Color space signalling — color_range was already set above, but
+    // color_primaries/color_trc/colorspace were never set at all, so a
+    // delivered file carried no signal of which color space it was
+    // actually encoded in. Some playback pipelines then guess wrong,
+    // which reads as "colors look off"/quality complaints unrelated to
+    // bit-rate. Prefer the real signal from Resolve (clrPrimaries) when
+    // present — its numbering is assumed to follow the same ISO/IEC
+    // 23001-8 (CICP) convention AVColorPrimaries/AVColorTransferCharacteristic/
+    // AVColorSpace already use, which is the standard convention for this
+    // exact kind of property in the broadcast/codec world, but this exact
+    // mapping has NOT been confirmed against a real Resolve export — fall
+    // back to an explicit default otherwise (BT.709 for 8-bit, BT.2020 for
+    // 10-bit — a reasonable heuristic, not a guarantee of the true source).
+    {
+        // `clrPrimaries` is a single "which primaries" hint — NOT three
+        // separate primaries/transfer/matrix values, so color_trc/colorspace
+        // are derived from WHICH primaries we got (small explicit mapping),
+        // never a blind reuse of the same raw number across three different
+        // enumerations (those don't share a numbering scheme beyond a few
+        // coincidental low values).
+        int16_t rawPrimaries = 0;
+        bool haveBt2020 = p_pBuff->GetINT16("clrPrimaries", rawPrimaries) && (rawPrimaries == AVCOL_PRI_BT2020);
+        bool wantWideGamut = haveBt2020 || (m_pVariant->bitDepth >= 10);
+
+        if (wantWideGamut)
+        {
+            m_pCtx->color_primaries = AVCOL_PRI_BT2020;
+            m_pCtx->color_trc = AVCOL_TRC_BT2020_10;
+            m_pCtx->colorspace = AVCOL_SPC_BT2020_NCL;
+        }
+        else
+        {
+            m_pCtx->color_primaries = AVCOL_PRI_BT709;
+            m_pCtx->color_trc = AVCOL_TRC_BT709;
+            m_pCtx->colorspace = AVCOL_SPC_BT709;
+        }
+    }
 
     if (m_QualityMode == 1)
     {
@@ -778,11 +898,26 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
 
         // Profile forcing — H.264 8-bit software only (see
         // s_GetEncoderSettings for why HEVC/10-bit/hardware are excluded).
+        // "high422" removed — see s_GetEncoderSettings for why.
         if (!m_pVariant->isHEVC && m_pVariant->bitDepth == 8)
         {
-            static const char* s_ProfileNames[] = { "baseline", "main", "high", "high422" };
-            int profileIdx = (m_Profile >= 0 && m_Profile < 4) ? m_Profile : 2;
+            static const char* s_ProfileNames[] = { "baseline", "main", "high" };
+            int profileIdx = (m_Profile >= 0 && m_Profile < 3) ? m_Profile : 2;
             av_dict_set(&pOpts, "profile", s_ProfileNames[profileIdx], 0);
+        }
+
+        // Level — real gap vs. any professional encoder: affects
+        // decoder/device compatibility (e.g. some hardware players cap out
+        // at Level 4.1). Index 0 is "Auto" — leave unset, let x264/x265
+        // infer one from resolution/bitrate, same as before this change.
+        if (m_Level > 0)
+        {
+            static const char* s_LevelNames[] = { "3.0", "3.1", "3.2", "4.0", "4.1", "4.2", "5.0", "5.1", "5.2" };
+            int levelIdx = m_Level - 1;
+            if (levelIdx >= 0 && levelIdx < static_cast<int>(sizeof(s_LevelNames) / sizeof(s_LevelNames[0])))
+            {
+                av_dict_set(&pOpts, "level", s_LevelNames[levelIdx], 0);
+            }
         }
 
         // Tune — codec-appropriate list (libx265 rejects "film" and
@@ -799,6 +934,19 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
             {
                 av_dict_set(&pOpts, "tune", pTuneNames[m_Tune], 0);
             }
+        }
+
+        // MainConcept-style "expert" escape hatch — raw x264-params/
+        // x265-params passthrough (aq-mode, psy-rd, ref, deblock, etc.)
+        // without hand-wiring a dedicated UI slider for every knob those
+        // encoders expose. libavcodec forwards this string as-is to
+        // x264_param_parse/x265_param_parse; a malformed string is
+        // rejected by that parser (avcodec_open2 fails cleanly with an
+        // error already logged below), it doesn't crash the plugin.
+        if (!m_AdvancedParams.empty())
+        {
+            const char* paramKey = m_pVariant->isHEVC ? "x265-params" : "x264-params";
+            av_dict_set(&pOpts, paramKey, m_AdvancedParams.c_str(), 0);
         }
     }
     else

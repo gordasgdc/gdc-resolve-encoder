@@ -691,12 +691,115 @@ clase, cauze tehnice) unei audiențe publice necunoscute.
   `MediaFlow-Monitor` (v1.0.0/v1.0.1) — restul release-urilor mai vechi din
   ecosistem rămân de verificat incremental, nu toate dintr-o dată.
 
+**30. Zero cod "impur" sau nelalocul lui — orice implementare TREBUIE
+finalizată complet, nu doar compilată (2026-09-03).** Cerință explicită de
+la Cristi, după un incident real: un fix scris în cod dar nepropagat peste
+tot unde era nevoie (versiune, `update.json`, ambele platforme, ambele
+aplicații) a lăsat sistemul într-o stare pe jumătate — "să nu rămână nimic
+inpur și nelalocul lui, să se implementeze tot ce am actualizat și am
+creat, să nu mai avem probleme". Regulă practică, obligatorie la orice
+schimbare de cod:
+- Orice constantă/valoare copiată dintr-un alt fișier/repo (chei, ID-uri,
+  praguri, URL-uri) se verifică ACTIV cu `grep`, nu se presupune corectă
+  doar pentru că a fost copiată — un audit se oprește abia când TOATE
+  aparițiile au fost verificate, nu doar cea raportată inițial.
+- O funcționalitate nouă/modificată se declară "gata" abia după ce
+  TOATE piesele ei sunt implementate și verificate — cod, rebuild+reinstall
+  (Regula 0), versiune sincronizată peste tot unde trebuie (Regula 14),
+  paritate Mac/Windows dacă aplică (regula de mai jos), `CHANGELOG.md`
+  (Regula 25). O piesă lăsată "pentru mai târziu" se spune EXPLICIT, nu se
+  ascunde într-un răspuns care sună ca "gata".
+- Orice implementare/îmbunătățire nouă a acestei Părți 1 se scrie DIN
+  START în `CLAUDE.md`-ul TUTUROR proiectelor din `~/Developer/` (Regula
+  11) — nu doar în repo-ul unde a pornit discuția.
+
+**31. Paritate Mac/Windows imediată, în aceeași sesiune (2026-09-03).**
+Completare la Regula 30: orice schimbare de cod livrată pe Mac care are un
+echivalent Windows în ecosistem (și invers) se portează 1:1 ÎN ACEEAȘI
+SESIUNE, fără să aștepți o cerere separată de la Cristi — portul e parte
+integrantă a schimbării, nu un TODO ulterior. Dacă portul chiar nu poate
+fi făcut acum (acces la mediul Windows indisponibil, testare reală
+imposibilă), se spune EXPLICIT ce lipsește și de ce, marcat clar în
+`CHANGELOG.md` ca "TODO paritate Windows/Mac" (Regula existentă de
+documentație) — nu se lasă nemenționat.
+
 ## [PARTEA 2: SPECIFICAȚII TEHNICE PROIECT]
 
 ## REGULĂ PERMANENTĂ: Locația proiectului pe disc (2026-08-25)
 Acest repo trăiește în **`~/Developer/gdc-resolve-encoder`**, NU în
 `~/Downloads`. Motiv: `~/Downloads` e curățat automat de CleanMyMac/Hazel
 pe acest Mac.
+
+## Jurnal tehnic
+
+**2026-09-04 — v1.4.0: optimizare cerută de Cristi ("calitate slabă,
+viteză mică, crash-uri, opțiuni lipsă") + instalator Windows.** Cerere
+venită cu SDK-ul oficial Blackmagic (`CodecPlugin.zip`, exemplul
+`x264_encoder_plugin`) și link-urile VideoLAN x264/x265 ca referință
+explicită. Comparat codul nostru cu exemplul oficial — găsite cauze
+concrete, nu presupuneri:
+- `m_pCtx->gop_size` era hardcodat la 12 cadre (fix la orice frame
+  rate) — acum calculat din `HostCodecConfigCommon::GetFrameRateNum/
+  Den()` (deja disponibil, doar nefolosit pentru asta), cu 2 secunde
+  implicit, expus ca slider `gdc_keyframe_interval`.
+- `color_primaries`/`color_trc`/`colorspace` nu erau setate NICIODATĂ pe
+  `AVCodecContext` (doar `color_range`) — acum setate explicit (BT.709
+  implicit, BT.2020 pentru variantele 10-bit sau dacă `clrPrimaries`
+  citit de la host indică asta). Adăugat `IPropertyProvider::GetINT16`
+  (`wrapper/host_api.h`/`.cpp`) — nu exista, doar GetINT32/UINT8/INT64/
+  Double/String — mecanic, oglindă exactă a `GetINT32`. **Notă onestă**:
+  maparea `clrPrimaries` → `AVColorPrimaries` presupune convenția
+  standard ISO/IEC 23001-8 (CICP) — NU confirmată direct cu un export
+  real din Resolve, doar cea mai probabilă interpretare dat fiind
+  numele proprietății; `color_trc`/`colorspace` sunt derivate dintr-o
+  mapare mică, explicită (NU o reinterpretare brută a aceleiași valori
+  ca trei enum-uri diferite — greșeală pe care am scris-o inițial și am
+  corectat-o înainte de commit, verificată cu grep, nu presupunere).
+- Profilul „high422", oferit în UI pentru variantele H.264 8-bit, nu
+  corespundea NICIUNUI `EncoderVariant` real (toate sunt 4:2:0/NV12) —
+  candidat plauzibil pentru eșecuri de `avcodec_open2` raportate ca
+  "nu se încarcă stabil". Eliminat din listă (în ambele locuri:
+  `s_GetEncoderSettings` ȘI `OpenCodec` — verificat cu grep că nu mai
+  rămâne nicio referință).
+- Adăugat: control **Level** (`gdc_level`, dropdown Auto + 3.0-5.2),
+  **thread_count explicit** (`std::thread::hardware_concurrency()`,
+  plafonat la 32), și câmp de **„Parametri avansați"**
+  (`gdc_advanced_params`, trimis ca `x264-params`/`x265-params` prin
+  `av_dict_set` — exact modelul MainConcept de acces expert, fără să
+  cablăm un slider nou pentru fiecare opțiune x264/x265 posibilă).
+- **2-pass (multi-pass) ABR — identificat ca feature real lipsă, prezent
+  chiar în exemplul oficial Blackmagic** (`x264_num_passes`,
+  `x264_param_apply_fastfirstpass`) — infrastructura de host EXISTĂ deja
+  în wrapper-ul nostru, neconectată (`IsNeedNextPass()` în
+  `wrapper/plugin_api.h`, `pIOPropMultiPass` în `IOPluginProps.h`).
+  **NEIMPLEMENTAT în acest pas, explicit** — cea mai mare bucată de cod
+  nouă din tot planul, amânată deliberat la o sesiune viitoare, ca restul
+  fix-urilor (mai mici, mai sigure) să nu aștepte după ea. Nu ascuns —
+  rămâne TODO documentat aici.
+- **Instalator Windows nou** (`install.ps1` + `install.bat`, rădăcina
+  repo-ului) — nu exista NIMIC înainte (userul copia manual folderul
+  bundle). Oglindă funcțională a `install.sh` (Mac, deja corect):
+  găsește bundle-ul, verifică structura, copiază în
+  `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\`,
+  cu re-lansare automată elevată (`Start-Process -Verb RunAs`) dacă
+  scrierea eșuează din lipsă de drepturi — Standard GDC de fallback
+  privilegiat, nu doar raportare de eroare. `install.bat` mic adăugat
+  ca wrapper dublu-clic (userul obișnuit nu vrea să facă click-dreapta →
+  "Run with PowerShell" pe un `.ps1`). `.github/workflows/build.yml`
+  actualizat să includă ambele fișiere în
+  `gdc-resolve-encoder-windows-x64.zip`, lângă bundle+PDF-uri deja
+  incluse (Mac avea deja `install.sh` inclus în zip-ul lui, neschimbat).
+- Verificat: `cmake --build` complet, curat (0 erori/avertismente) pe
+  Mac direct. Windows/Linux verificate prin CI (`.github/workflows/
+  build.yml`, rulează automat la push) — **NU verificat prin export
+  real în DaVinci Resolve** (nu am acces la Resolve din acest mediu);
+  comportamentul real (calitate vizuală, viteză, `install.ps1` rulat
+  efectiv pe un Windows real, inclusiv fallback-ul de elevare) rămâne de
+  confirmat de Cristi.
+- Versiune: acest plugin nu ține un număr de versiune în cod (distribuit
+  prin tag-uri GitHub Release, vezi nota arhitecturală de mai jos) —
+  următorul tag e `v1.4.0` (MINOR — opțiuni noi vizibile: Level,
+  Keyframe Interval, Parametri avansați, instalator Windows).
 
 ## NOTĂ ARHITECTURALĂ: Directiva Supremă de release NU se aplică 1:1 aici
 Acesta e un plugin DaVinci Resolve (OFX), NU o aplicație standalone cu

@@ -1,5 +1,7 @@
 #pragma once
 
+#include <string>
+
 #include "wrapper/plugin_api.h"
 #include "encoder_variants.h"
 
@@ -59,9 +61,12 @@ private:
     int32_t m_CRF;
     int32_t m_BitRateKbps;
     int32_t m_Preset; // maps to a libx264/libx265 preset string, ignored by hardware encoders
-    int32_t m_Profile; // H.264 8-bit software only: index into baseline/main/high/high422
+    int32_t m_Profile; // H.264 8-bit software only: index into baseline/main/high
     int32_t m_Tune;     // index into the codec-appropriate tune list, 0 = none
     int32_t m_QP;
+    int32_t m_KeyframeIntervalSec; // GOP length, in seconds — converted to frames from the real source frame rate in OpenCodec
+    int32_t m_Level; // index into s_LevelNames, 0 = "Auto" (don't set explicitly)
+    std::string m_AdvancedParams; // raw x264-params/x265-params passthrough, MainConcept-style "expert" field
 
     int64_t m_FrameCount;
     int64_t m_PacketCount;
