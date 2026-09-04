@@ -829,3 +829,57 @@ menționând Linux — pagină HTML/JS de o singură bucată, nu am citit-o
 integral și nu am editat-o acum ca să nu risc s-o stric fără verificare
 vizuală reală. De făcut la următoarea atingere a acestui repo, înainte de
 `v1.5.0`.
+
+**2026-09-04 — v1.4.1: BUG STRUCTURAL REAL găsit la testare — FFmpeg
+SONAME mismatch — + instalator .pkg semnat/notarizat.** Cristi a instalat
+v1.4.0 (Mac) și pluginul nu apărea deloc în lista de codecuri din
+Resolve, deși bundle-ul era prezent corect în folderul IOPlugins. Diagnoză
+directă pe mașina lui (`otool -L`, `xattr`, `codesign -dv`, versiune chip,
+FFmpeg instalat): pluginul PUBLICAT (construit de CI, `macos-14` runner,
+`brew install ffmpeg` proaspăt la fiecare build) cerea
+`libavcodec.62.dylib`/`libavutil.60.dylib`/`libswscale.9.dylib`, dar
+FFmpeg-ul de pe mașina lui (Homebrew, la zi) avea DOAR
+`.63`/`.61`/`.10` — SONAME-uri diferite, deci `dlopen` eșuează SILENȚIOS
+la încărcarea plugin-ului de către Resolve (fără nicio eroare vizibilă în
+UI). **Cauză structurală, nu doar o instalare veche**: pluginul se leagă
+DINAMIC la calea absolută Homebrew a FFmpeg-ului de PE MAȘINA DE
+COMPILARE — orice discrepanță de versiune între mașina CI/build și mașina
+utilizatorului (extrem de probabilă, Homebrew updatează ffmpeg des) rupe
+încărcarea, silențios, fără avertisment. Foarte plauzibil să fi fost un
+contributor real la "crash-uri / nu se încarcă stabil" din cererea
+inițială a lui Cristi — mai degrabă decât (sau pe lângă) profilul
+"high422" reparat în v1.4.0.
+
+**NEREZOLVAT DEFINITIV — TODO real, explicit, pentru sesiunea următoare**:
+soluția corectă e fie (a) legarea FFmpeg static la compilare (elimină
+complet dependența de runtime), fie (b) bundling-ul dylib-urilor FFmpeg +
+TOATE dependințele lor tranzitive (x264, x265, etc.) direct în bundle,
+cu `install_name_tool`/`@loader_path` rescriere de căi — exact ce face
+deja Windows (DLL-urile FFmpeg sunt incluse direct în arhivă, vezi
+`.github/workflows/build.yml`). Un instrument ca `dylibbundler` ar face
+asta corect și complet (recursiv); NU încercat acum — bundling manual,
+incomplet, ar fi mutat problema un nivel mai jos (dependințele
+TRANZITIVE ale libavcodec însuși) fără s-o rezolve cu-adevărat.
+
+**Fix practic, imediat, aplicat**: `build_installer.sh` (NOU) — compilează
+plugin-ul LOCAL, pe mașina curentă (deci garantat potrivit cu FFmpeg-ul
+ei), îl semnează cu `APPLE_SIGN_IDENTITY_APP` (cert deja existent în
+`~/Developer/Certificates/`, `entitlements.plist` copiat neschimbat din
+`codesigning/` — `com.apple.security.cs.disable-library-validation` e
+critic aici, altfel Hardened Runtime ar respinge dylib-urile Homebrew
+nesemnate de noi), îl împachetează într-un `.pkg` (`pkgbuild` +
+`productbuild`, payload direct la
+`/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/`,
+`installer/scripts/preinstall` curăță o instalare veche, `installer/
+License.txt` nou — Regula 19, pas de licență Agree/Disagree obligatoriu),
+apoi semnează+notarizează+staplează pachetul final
+(`codesigning/sign-and-notarize.sh pkg`, folder copiat NESCHIMBAT din
+`GDCVault`). **Testat efectiv, cu succes complet**: `spctl -a -vv -t
+install` → `accepted, source=Notarized Developer ID`; notarizare Apple
+reușită (`status: Accepted`); `pkgutil --payload-files` confirmă
+destinația corectă. Trimis lui Cristi ca fișier, de instalat prin
+dublu-clic — cerut explicit ("vreau instalare tip pkg", "sa nu rulez eu
+in terminal"). `install.sh` (Terminal) rămâne disponibil ca alternativă
+manuală, dar `.pkg`-ul e acum calea principală recomandată pe Mac.
+Versiune 1.4.0 → 1.4.1 (PATCH — fix real de încărcare + instalator nou,
+nicio schimbare de funcționalitate de encodare).

@@ -1,0 +1,36 @@
+TERMENI ȘI CONDIȚII — GDC Resolve Encoder
+Ultima actualizare: 4 septembrie 2026
+
+1. LICENȚA
+GDC Resolve Encoder ("Plugin-ul") este dezvoltat de Cristi Gordas ("GDC",
+"Dezvoltatorul"). Prin instalarea și utilizarea Plugin-ului, accepți acești
+termeni.
+
+Îți este acordată o licență personală, netransmisibilă, de a instala și
+folosi Plugin-ul pe calculatoarele tale, pentru uz propriu sau profesional,
+împreună cu DaVinci Resolve Studio.
+
+2. NATURA PROIECTULUI
+Acesta este un proiect independent, neafiliat cu Blackmagic Design.
+Plugin-ul este oferit "ca atare" (AS IS), fără nicio garanție explicită
+sau implicită. Dezvoltatorul nu este responsabil pentru pierderi directe
+sau indirecte rezultate din utilizarea sau imposibilitatea utilizării
+Plugin-ului, inclusiv exporturi eșuate sau fișiere corupte.
+
+3. LICENȚIERE
+Plugin-ul poate necesita o cheie de activare, legată de identificatorul
+mașinii tale (Machine ID). Susținerea dezvoltării se face exclusiv sub
+formă de donație — contactează Dezvoltatorul prin WhatsApp (detalii în
+panoul de setări al Plugin-ului) pentru activare.
+
+4. FĂRĂ COLECTARE DE DATE
+Plugin-ul nu colectează date personale și nu trimite telemetrie. Nu are
+nicio conexiune la rețea în timpul encodării.
+
+5. MODIFICĂRI
+Acești termeni pot fi actualizați odată cu versiuni viitoare ale
+Plugin-ului. Continuarea folosirii Plugin-ului după o actualizare
+înseamnă acceptarea noilor termeni.
+
+Prin bifarea căsuței de acceptare din acest instalator, confirmi că ai
+citit și ești de acord cu acești termeni.
