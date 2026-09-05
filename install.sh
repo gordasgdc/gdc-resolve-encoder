@@ -20,36 +20,12 @@ if [[ "$(uname)" != "Darwin" ]]; then
     exit 1
 fi
 
-# --- verify FFmpeg is installed --------------------------------------------
-# Plugin-ul foloseste bibliotecile FFmpeg din sistem (nu sunt incluse in
-# bundle — vezi README pentru motiv). Fara ele, plugin-ul nu se incarca deloc
-# in Resolve, fara niciun mesaj de eroare vizibil in interfata.
-log "Verific daca FFmpeg este instalat..."
-if command -v ffmpeg &> /dev/null; then
-    ok "FFmpeg este deja instalat ($(ffmpeg -version | head -n1 | cut -d' ' -f3))."
-else
-    echo ""
-    echo "FFmpeg nu a fost gasit. Plugin-ul are nevoie de el ca sa functioneze."
-    if ! command -v brew &> /dev/null; then
-        err "Homebrew nu e instalat, deci nu pot instala FFmpeg automat."
-        echo ""
-        echo "Instaleaza Homebrew mai intai, cu:"
-        echo '  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
-        echo ""
-        echo "Apoi ruleaza din nou acest script. Sau instaleaza FFmpeg manual (vezi README)."
-        exit 1
-    fi
-    read -r -p "Instalez FFmpeg acum prin Homebrew? [Y/n] " reply
-    if [[ "$reply" =~ ^[Nn]$ ]]; then
-        err "Instalare anulata — plugin-ul nu va functiona fara FFmpeg."
-        exit 1
-    fi
-    log "Instalez FFmpeg (poate dura cateva minute)..."
-    brew install ffmpeg
-    ok "FFmpeg instalat."
-fi
-
 # --- locate the bundle -------------------------------------------------
+# NOTA: pana la v1.4.1, aici se verifica daca FFmpeg e instalat pe sistem
+# (prin Homebrew) — plugin-ul se lega dinamic la el. De la fix-ul SONAME
+# mismatch (2026-09-05), FFmpeg + toate dependintele lui vin deja incluse
+# in bundle (Contents/Frameworks/), deci userul nu mai are nevoie de nimic
+# instalat separat pe Mac.
 BUNDLE_PATH=""
 if [[ -n "${1:-}" ]]; then
     BUNDLE_PATH="$1"

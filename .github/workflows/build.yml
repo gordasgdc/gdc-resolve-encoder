@@ -20,7 +20,7 @@ jobs:
 
       - name: Install build deps (Homebrew)
         run: |
-          brew install cmake pkg-config ffmpeg
+          brew install cmake pkg-config ffmpeg dylibbundler
 
       - name: Configure
         run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
@@ -33,6 +33,12 @@ jobs:
           BUNDLE="${{ env.PLUGIN_NAME }}.dvcp.bundle/Contents/MacOS"
           mkdir -p "$BUNDLE"
           cp build/${{ env.PLUGIN_NAME }}.dvcp "$BUNDLE/"
+
+          # Bundleaza FFmpeg + dependinte tranzitive direct in bundle, ca
+          # plugin-ul sa nu mai depinda de FFmpeg-ul Homebrew al userului
+          # final la runtime (fix SONAME mismatch, vezi CLAUDE.md).
+          ./bundle_ffmpeg_mac.sh "${{ env.PLUGIN_NAME }}.dvcp.bundle" "${{ env.PLUGIN_NAME }}.dvcp"
+          codesign --force --sign - "$BUNDLE/${{ env.PLUGIN_NAME }}.dvcp"
 
           mkdir -p dist_mac
           cp -R "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_mac/
@@ -48,9 +54,9 @@ jobs:
             '' \
             '    ./install.sh' \
             '' \
-            'Scriptul verifica FFmpeg (il instaleaza prin Homebrew daca lipseste),' \
-            'elimina carantina macOS, si copiaza pluginul la locul corect. Iti va' \
-            'cere parola (sudo) o singura data, ca sa scrie in folderul de sistem.' \
+            'Scriptul elimina carantina macOS si copiaza pluginul la locul corect' \
+            '(FFmpeg vine deja inclus in bundle, nu trebuie instalat separat).' \
+            'Iti va cere parola (sudo) o singura data, ca sa scrie in folderul de sistem.' \
             '' \
             'Dupa instalare, restart la DaVinci Resolve.' \
             '' \

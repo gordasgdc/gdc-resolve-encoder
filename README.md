@@ -42,7 +42,7 @@ Fiecare setare, cu exemple concrete de când și cum s-o folosești, e explicat�
 
 Descarcă arhiva pentru platforma ta din [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest).
 
-> **Despre FFmpeg**: plugin-ul nu include FFmpeg în pachet (dimensiune mare, complicații de licențiere GPL/LGPL). Pe **Mac**, ai nevoie de FFmpeg instalat separat în sistem. Pe **Windows**, bibliotecile necesare vin deja incluse în arhivă — nu trebuie să instalezi nimic în plus.
+> **Despre FFmpeg**: bibliotecile FFmpeg necesare vin deja incluse în arhivă, atât pe **Mac** cât și pe **Windows** — nu trebuie să instalezi nimic în plus.
 
 ### macOS (Apple Silicon)
 
@@ -50,16 +50,11 @@ Descarcă arhiva pentru platforma ta din [Releases](https://github.com/gordasgdc
 
 Alternativ, arhiva de pe [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) include `install.sh` (Terminal):
 
-**Cerință prealabilă**: [Homebrew](https://brew.sh) — dacă nu-l ai deja instalat, rulează:
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
-
 Cel mai simplu: în folderul dezarhivat, rulează:
 ```bash
 ./install.sh
 ```
-Scriptul verifică Homebrew și FFmpeg (îl instalează dacă lipsește), elimină carantina macOS, și copiază plugin-ul la locul corect. Cere parola o singură dată.
+Scriptul elimină carantina macOS și copiază plugin-ul la locul corect (FFmpeg vine deja inclus în bundle). Cere parola o singură dată.
 
 Manual, dacă preferi:
 ```bash
@@ -89,7 +84,6 @@ Manual, dacă preferi: mută folderul `gdc_resolve_encoder.dvcp.bundle` (întreg
 
 - **DaVinci Resolve Studio** (versiunea gratuită nu suportă IOPlugins)
 - **macOS Apple Silicon** sau Windows 64-bit — Mac Intel nu e suportat
-- **FFmpeg instalat în sistem** — pe Mac (Windows are DLL-urile incluse în arhivă)
 - Pentru NVENC: placă video **NVIDIA** cu driver actualizat
 
 ## Structura corectă a bundle-ului

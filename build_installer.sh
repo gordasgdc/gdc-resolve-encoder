@@ -7,14 +7,13 @@
 # Developer ID Application/Installer sunt configurate (vezi
 # codesigning/README.md). Altfel cade pe un pachet NESEMNAT.
 #
-# IMPORTANT: plugin-ul se leaga DINAMIC la FFmpeg-ul din Homebrew de pe
-# MASINA PE CARE SE COMPILEAZA — .pkg-ul produs va cere exact acele
-# SONAME-uri (libavcodec.NN.dylib etc.) la runtime. Daca FFmpeg-ul de pe
-# Homebrew se schimba de versiune intre build si instalare pe alta masina,
-# plugin-ul nu se va incarca (esec silentios in Resolve, fara eroare
-# vizibila) — problema reala, structurala, gasita 2026-09-04, inca
-# nerezolvata definitiv (ar necesita bundling static sau al dylib-urilor
-# FFmpeg in pachet, ca pe Windows — vezi CLAUDE.md).
+# FIX 2026-09-05 (rezolva bug-ul SONAME mismatch documentat in CLAUDE.md,
+# gasit 2026-09-04): FFmpeg + toate dependintele lor tranzitive sunt acum
+# bundle-uite DIRECT in bundle (Contents/Frameworks/, vezi
+# bundle_ffmpeg_mac.sh) — plugin-ul nu mai depinde de FFmpeg-ul Homebrew de
+# pe masina utilizatorului final, indiferent ce versiune are.
+#
+# NEVOIE: dylibbundler instalat pe masina de build (`brew install dylibbundler`).
 
 set -euo pipefail
 cd "$(dirname "$0")"
@@ -39,6 +38,8 @@ rm -rf "$DIST_DIR"
 BUNDLE_DIR="$DIST_DIR/${BUNDLE_NAME}"
 mkdir -p "$BUNDLE_DIR/Contents/MacOS"
 cp "build/${PLUGIN_NAME}.dvcp" "$BUNDLE_DIR/Contents/MacOS/"
+
+./bundle_ffmpeg_mac.sh "$BUNDLE_DIR" "${PLUGIN_NAME}.dvcp"
 
 if [ -n "${APPLE_SIGN_IDENTITY_APP:-}" ]; then
     echo "==> Semnez binarul plugin-ului..."
