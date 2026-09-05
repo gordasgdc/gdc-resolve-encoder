@@ -5,16 +5,6 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
-## v1.5.0 (2026-09-05) — 2-Pass Encoding (bitrate mai precis, x264/x265)
-
-**Opțiune nouă**: bifă „2-Pass Encoding" în modul Target Bitrate, pentru
-variantele software (H.264/H.265, x264/x265) — encodează sursa de două ori
-(prima trecere analizează, a doua produce fișierul final), pentru o
-distribuție mai precisă a bitrate-ului față de o singură trecere. Timpul
-de randare este aproximativ dublu cât rulează activată; dezactivată
-(implicit), comportamentul rămâne exact ca înainte. Nu e disponibilă pe
-encoderele hardware (VideoToolbox/NVENC) sau în modurile CRF/QP.
-
 ## v1.4.2 (2026-09-05) — Fix definitiv: plugin-ul nu mai depinde de FFmpeg-ul de pe mașina ta (Mac)
 
 **Rezolvă definitiv fragilitatea semnalată în v1.4.1**: pluginul Mac

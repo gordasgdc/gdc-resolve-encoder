@@ -115,7 +115,7 @@ cmake --build build --config Release
 
 - No HDR support (PQ/HLG metadata) yet — planned for a future version
 - 10-bit is software-only (x264/x265) for now, not hardware
-- 2-Pass Encoding available only for software variants (x264/x265), Target Bitrate mode only — not on hardware (VideoToolbox/NVENC)
+- No multi-pass rendering — single-pass only currently
 - CRF on hardware encoders (VideoToolbox/NVENC) automatically falls back to a fixed bitrate, not true constant quality — hardware doesn't expose CRF the same way x264/x265 do
 
 ## License
