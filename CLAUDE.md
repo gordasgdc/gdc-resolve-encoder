@@ -941,9 +941,11 @@ efectiv — bundling FFmpeg + toate dependințele tranzitive, cu
   referințe la `/opt/homebrew` — dovadă directă că bug-ul de SONAME
   mismatch (v1.4.1) nu se mai poate reproduce, indiferent ce versiune de
   FFmpeg are utilizatorul final instalată (sau dacă nu are Homebrew
-  deloc). **NU verificat**: export real în DaVinci Resolve pe mașina lui
-  Cristi (nu am acces la Resolve din acest mediu) — comportamentul în
-  Resolve efectiv rămâne de confirmat de el, la fel ca la v1.4.0/v1.4.1.
+  deloc). **CONFIRMAT de Cristi (2026-09-05)**: `.pkg` de test
+  (`GDCResolveEncoder-1.4.2.pkg`, nesemnat — cert Developer ID Installer
+  lipsă din Keychain, instalat manual cu `sudo installer -pkg ... -target
+  /`) — codecul GDC apare corect în lista din Resolve. Bug-ul de SONAME
+  mismatch confirmat rezolvat definitiv, nu doar teoretic.
 - Versiune 1.4.1 → 1.4.2 (PATCH — fix structural de încărcare, nicio
   schimbare de funcționalitate de encodare vizibilă). Tag-ul `v1.4.2` nu a
   fost creat/împins încă — rămâne un pas separat, de făcut când Cristi
