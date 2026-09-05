@@ -883,3 +883,68 @@ in terminal"). `install.sh` (Terminal) rămâne disponibil ca alternativă
 manuală, dar `.pkg`-ul e acum calea principală recomandată pe Mac.
 Versiune 1.4.0 → 1.4.1 (PATCH — fix real de încărcare + instalator nou,
 nicio schimbare de funcționalitate de encodare).
+
+**2026-09-05 — v1.4.2: TODO-ul „NEREZOLVAT DEFINITIV" de mai sus, rezolvat
+efectiv — bundling FFmpeg + toate dependințele tranzitive, cu
+`dylibbundler`.** Opțiunea (b) din nota de mai sus, aleasă (statică ar fi
+însemnat recompilarea FFmpeg din surse, mult mai fragil de întreținut).
+- **`bundle_ffmpeg_mac.sh`** (NOU, rădăcina repo-ului) — o singură sursă de
+  adevăr, apelată identic din `build_installer.sh` (local, `.pkg`
+  notarizat) ȘI din `.github/workflows/build.yml` (CI, zip) — Regula 30,
+  zero cod duplicat care poate diverge. Rulează `dylibbundler -ns -cd -b`
+  pe binarul `.dvcp` cu `-p @loader_path/../Frameworks/`, copiind
+  `libavcodec`/`libavutil`/`libswscale`/`libswresample` ȘI toate
+  dependințele lor tranzitive reale (verificate la rulare pe acest Mac:
+  `libx264`, `libx265`, `libvpx`, `libdav1d`, `libSvtAv1Enc`, `libopus`,
+  `libmp3lame`, `libmpg123`, `liblzma`, `libssl`, `libcrypto` — 15
+  biblioteci în total) direct în `Contents/Frameworks/` al bundle-ului.
+  `-ns` dezactivează semnarea ad-hoc automată a lui `dylibbundler` — script-ul
+  semnează el însuși fiecare dylib, cu `APPLE_SIGN_IDENTITY_APP` (Developer
+  ID real, necesar pentru notarizare) dacă e setat în mediu, altfel ad-hoc
+  (fluxul CI/zip nesemnat, neschimbat). Verificare automată inclusă în
+  script: `otool -L` pe binar ȘI pe fiecare dylib copiat, eșuează exit 1
+  dacă mai rămâne vreo cale absolută `/opt/homebrew`/`/usr/local/opt`.
+- **`build_installer.sh`** — reordonat: bundling-ul FFmpeg rulează ACUM
+  între copierea binarului brut în bundle și semnarea finală a binarului
+  principal (`dylibbundler` rescrie load commands, ceea ce invalidează
+  orice semnătură anterioară — semnarea trebuie să vină ultima).
+- **CI (`build.yml`, jobul `build-macos`)** — adăugat `brew install
+  dylibbundler` lângă `cmake`/`pkg-config`/`ffmpeg` deja existente, plus
+  apelul la `bundle_ffmpeg_mac.sh` + o semnare ad-hoc a binarului principal
+  (înainte nesemnat complet) imediat după compilare, înainte de zip. Zip-ul
+  de pe GitHub Releases e acum la fel de self-contained ca `.pkg`-ul local.
+- **`install.sh`** — eliminat complet pasul de verificare/instalare
+  Homebrew+FFmpeg (nu mai e nevoie de el structural).
+- **`README.md`/`.en.md`/`.es.md`** — actualizate să reflecte că FFmpeg nu
+  mai trebuie instalat separat pe Mac (secțiunea "Despre FFmpeg", pașii de
+  instalare, lista de Cerințe). Secțiunea de compilare din surse
+  (`brew install cmake pkg-config ffmpeg`) rămâne neschimbată — e nevoie de
+  headers FFmpeg la COMPILARE, distinct de dependința de RUNTIME eliminată
+  aici.
+- **`docs/index.html`** (RO/EN/ES, i18n) — rândul din secțiunea Cerințe
+  care cerea `brew install ffmpeg` pe Mac, înlocuit cu confirmarea că nu
+  mai e nevoie de nimic în plus.
+- **NEFĂCUT, TODO explicit**: cele 3 ghiduri PDF trilingve
+  (`docs/guides/GDC_Resolve_Encoder_Ghid_RO.pdf` etc.) probabil mai
+  menționează pasul Homebrew/FFmpeg (Regula 8(b)) — sunt fișiere binare
+  statice, fără script generator în acest repo, NEVERIFICATE și
+  NEACTUALIZATE acum. De revizuit/regenerat la următoarea atingere a
+  documentației acestui repo.
+- **Verificat real, nu presupus**: `cmake --build` curat (0 erori) pe
+  această mașină; `./bundle_ffmpeg_mac.sh` rulat direct pe binarul
+  compilat local — output confirmă 15 dylib-uri copiate, verificarea
+  internă `otool -L` a trecut (zero căi Homebrew rămase). Test funcțional
+  real de încărcare: `ctypes.CDLL(...)` (Python, echivalent cu `dlopen`
+  folosit de Resolve) a reușit ÎNAINTE și DUPĂ semnarea binarului
+  principal; `DYLD_PRINT_LIBRARIES=1` confirmă că TOATE cele 15
+  dependințe se încarcă din `Contents/Frameworks/` al bundle-ului, ZERO
+  referințe la `/opt/homebrew` — dovadă directă că bug-ul de SONAME
+  mismatch (v1.4.1) nu se mai poate reproduce, indiferent ce versiune de
+  FFmpeg are utilizatorul final instalată (sau dacă nu are Homebrew
+  deloc). **NU verificat**: export real în DaVinci Resolve pe mașina lui
+  Cristi (nu am acces la Resolve din acest mediu) — comportamentul în
+  Resolve efectiv rămâne de confirmat de el, la fel ca la v1.4.0/v1.4.1.
+- Versiune 1.4.1 → 1.4.2 (PATCH — fix structural de încărcare, nicio
+  schimbare de funcționalitate de encodare vizibilă). Tag-ul `v1.4.2` nu a
+  fost creat/împins încă — rămâne un pas separat, de făcut când Cristi
+  confirmă că vrea să publice.

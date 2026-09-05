@@ -5,6 +5,15 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.4.2 (2026-09-05) — Fix definitiv: plugin-ul nu mai depinde de FFmpeg-ul de pe mașina ta (Mac)
+
+**Rezolvă definitiv fragilitatea semnalată în v1.4.1**: pluginul Mac
+include acum FFmpeg direct în pachet (nu se mai leagă la ce ai instalat pe
+sistem prin Homebrew) — indiferent ce versiune de FFmpeg ai sau dacă ai
+Homebrew instalat deloc, pluginul funcționează identic. Nimic nou de
+instalat sau de configurat — arhiva `install.sh` de pe GitHub nu mai cere
+Homebrew, iar `.pkg`-ul semnat rămâne calea recomandată.
+
 ## v1.4.1 (2026-09-04) — Instalator .pkg semnat + notarizat (Mac)
 
 **Instalare Mac, complet nouă**: în loc de `install.sh` (Terminal), acum

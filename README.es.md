@@ -42,20 +42,15 @@ Cada ajuste, con ejemplos concretos de cuándo y cómo usarlo, está explicado e
 
 Descarga el archivo para tu plataforma desde [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest).
 
-> **Sobre FFmpeg**: el plugin no incluye FFmpeg (tamaño grande, complicaciones de licencia GPL/LGPL). En **Mac**, necesitas FFmpeg instalado por separado en el sistema. En **Windows**, las librerías necesarias ya vienen incluidas en el archivo — no hay que instalar nada extra.
+> **Sobre FFmpeg**: las librerías de FFmpeg necesarias ya vienen incluidas en el archivo, tanto en **Mac** como en **Windows** — no hay que instalar nada extra.
 
 ### macOS (Apple Silicon)
-
-**Requisito previo**: [Homebrew](https://brew.sh) — si aún no lo tienes, ejecuta:
-```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-```
 
 Lo más sencillo: en la carpeta descomprimida, ejecuta:
 ```bash
 ./install.sh
 ```
-El script comprueba Homebrew y FFmpeg (instala FFmpeg si falta), elimina el indicador de cuarentena de macOS, y copia el plugin a la ubicación correcta. Pide tu contraseña una sola vez.
+El script elimina el indicador de cuarentena de macOS y copia el plugin a la ubicación correcta (FFmpeg ya viene incluido en el paquete). Pide tu contraseña una sola vez.
 
 Instalación manual, si lo prefieres:
 ```bash
@@ -86,7 +81,6 @@ Manual, si prefieres: mueve la carpeta completa `gdc_resolve_encoder.dvcp.bundle
 
 - **DaVinci Resolve Studio** (la edición gratuita no soporta IOPlugins)
 - **macOS Apple Silicon** o Windows de 64 bits — los Mac Intel no son compatibles
-- **FFmpeg instalado en el sistema** — Mac (Windows tiene los DLL incluidos en el archivo)
 - Para NVENC: una GPU **NVIDIA** con driver actualizado
 
 ## Estructura correcta del bundle
