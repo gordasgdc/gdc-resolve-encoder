@@ -950,3 +950,58 @@ efectiv — bundling FFmpeg + toate dependințele tranzitive, cu
   schimbare de funcționalitate de encodare vizibilă). Tag-ul `v1.4.2` nu a
   fost creat/împins încă — rămâne un pas separat, de făcut când Cristi
   confirmă că vrea să publice.
+
+**2026-09-05 — 2-Pass (multi-pass) ABR încercat, EȘUAT REAL la testare, REVERTIT
+complet (commit `400675d`, revert al `a4bdb73`).** TODO-ul cel mai mare rămas
+din planul v1.4.0 — implementat, verificat cu un test standalone real
+FFmpeg (nu doar presupus), livrat ca `.pkg` de test lui Cristi. **A eșuat
+real în DaVinci Resolve**, confirmat direct din `davinci_resolve.log`
+(bundle-ul de log-uri trimis de Cristi, `DaVinci-Resolve-logs-20260905-033304.zip`):
+
+```
+Plugin Info :: GDC Encoder :: DoFlush complete — 349 frames sent, 349 packets...
+Plugin Error :: GDC Encoder :: avcodec_send_frame failed at frame 349: End of file
+Failed to Encode Frame, codec ...:9A1C3E026B774F108E210C4F2A917D01
+Task ERROR :: Error occured during recording of /Volumes/GDC/facebook/t1.mov : Failed to encode the video frame.
+... (repetat, cascadă de "Unknown error")
+GsManager :: Recording cancelled after 20 frames.
+```
+
+- **Root cause identificat din log, nu presupus**: după ce pass 1 se
+  termină (`DoFlush()` trimite EOF către `avcodec_send_frame`, drenează
+  tot, `m_EofSentToEncoder=true` permanent pe acel `AVCodecContext`),
+  Resolve NU a apelat niciodată `DoOpen()` a doua oară (niciun log
+  "OpenCodec — pass 2/2" nu apare NICIUNDE în întregul fișier de log,
+  deși pass 1 a rulat de 2 ori, pentru 2 codec-uri diferite testate pe
+  rând). În schimb, Resolve a continuat să trimită cadre REALE direct la
+  `DoProcess()` pe ACEEAȘI instanță/`AVCodecContext` deja aflat la EOF —
+  eșuat instant, randare anulată de Resolve după 20 de cadre.
+- **Concluzie**: presupunerea din plan ("hostul reapelează `DoOpen()` pe
+  aceeași instanță după `IsNeedNextPass()==true`", bazată strict pe
+  structura `wrapper/plugin_api.h`, oglindă a SDK-ului oficial) e
+  GREȘITĂ pentru comportamentul REAL al acestei versiuni de DaVinci
+  Resolve (v21.0.4.0005) — fie `msgCodecNeedNextPass` nu e apelat deloc,
+  fie contractul real e diferit (posibil: Resolve se așteaptă ca
+  `DoFlush()` să NU trimită un EOF definitiv către encoder cât timp mai
+  urmează o trecere, ci doar să dreneze pachetele PENDING, lăsând
+  `AVCodecContext`-ul deschis pentru cadre noi pe aceeași instanță) — nu
+  confirmat care variantă e cea corectă, doar că arhitectura implementată
+  acum e greșită.
+- **Acțiune luată, imediat, fără să aștept o sesiune viitoare**: REVERT
+  complet (`git revert a4bdb73`, commit `400675d`) — checkbox-ul
+  „2-Pass Encoding" dispare din UI, plugin-ul revine exact la
+  comportamentul v1.4.2 (deja confirmat funcțional real de Cristi).
+  Niciun tag `v1.5.0` fusese creat/împins — nimic de retras public.
+  Mecanismul de bază FFmpeg (fișier `passlogfile`/`x265-stats`,
+  confirmat funcțional printr-un test standalone real, în afara
+  plugin-ului) rămâne valid pentru o încercare viitoare — problema e
+  EXCLUSIV la nivelul orchestrării `IsNeedNextPass()`/`DoOpen()` din
+  interiorul acestui plugin, nu la nivelul FFmpeg.
+- **TODO real, pentru o sesiune viitoare, dacă se reia**: găsit/confirmat
+  contractul REAL al Resolve pentru multi-pass (documentație oficială
+  Blackmagic, dacă există, sau un exemplu funcțional din SDK — cel din
+  `x264_encoder_plugin` menționat în cererea inițială a lui Cristi merită
+  verificat explicit pentru ACEST detaliu specific, nu doar pentru
+  parametrii de encodare copiați deja la v1.4.0), ideal cu un ciclu de
+  testare mai rapid (clip foarte scurt) înainte de a trimite din nou un
+  build de test.
