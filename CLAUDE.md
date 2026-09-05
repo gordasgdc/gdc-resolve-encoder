@@ -950,3 +950,61 @@ efectiv — bundling FFmpeg + toate dependințele tranzitive, cu
   schimbare de funcționalitate de encodare vizibilă). Tag-ul `v1.4.2` nu a
   fost creat/împins încă — rămâne un pas separat, de făcut când Cristi
   confirmă că vrea să publice.
+
+**2026-09-05 — v1.5.0: 2-Pass (multi-pass) ABR implementat — TODO-ul cel
+mai mare rămas din planul v1.4.0, "amânat deliberat la o sesiune
+viitoare".** Infrastructura de host (`IsNeedNextPass()`,
+`pIOPropMultiPass`) exista deja în `wrapper/plugin_api.h`, neconectată —
+conectată acum, integral, doar în `src/ffmpeg_encoder.h`/`.cpp`.
+
+- **Prima încercare a fost GREȘITĂ, prinsă înainte de commit printr-un
+  test real, nu presupunere**: planul inițial (și un prim draft de cod)
+  presupunea mecanismul generic `AVCodecContext.stats_in`/`stats_out`
+  documentat chiar în `avcodec.h` ("pass1 encoding statistics output
+  buffer... Set by libavcodec" / "concatenated stuff from stats_out of
+  pass1 should be placed here"). Scris un mic program C standalone
+  (`libavcodec` direct, în afara plugin-ului) care rulează exact acest
+  flux cu `libx264` — rezultat: `stats_out` rămâne mereu NULL, pass 1 nu
+  produce absolut nimic pe acel câmp. Investigat cu `ffmpeg -h
+  encoder=libx264`/`encoder=libx265`: ambele encodere au propriul
+  mecanism PRIVAT, bazat pe FIȘIER (`-passlogfile`/`-stats` pentru x264,
+  `-x265-stats` pentru x265) — exact ce folosește și `ffmpeg -pass 1/2`
+  din linia de comandă intern, NU câmpurile generice de pe context (acelea
+  sunt pentru alte codec-uri, ex. cele MPEG native din libavcodec). Testul
+  standalone REFĂCUT cu fișier real (`passlogfile`/`x265-stats`) —
+  confirmat funcțional pe ambele codec-uri: pass 1 scrie un fișier de
+  statistici real pe disc (~7-9 KB pentru un clip sintetic de test), pass
+  2 îl citește și produce un output vizibil diferit ca dimensiune față de
+  pass 1 (dovadă directă că a folosit efectiv statisticile, nu doar că nu
+  a crăpat).
+- **Implementare finală** (`FFmpegEncoder`): `gdc_multipass` — bifă nouă
+  în UI, vizibilă DOAR în modul Target Bitrate + doar pe variantele
+  software (x264/x265; hardware VideoToolbox/NVENC nu au acest mecanism).
+  `m_PassNumber` (1 sau 2) + `m_StatsFilePath` (cale unică per instanță,
+  în `std::filesystem::temp_directory_path()`, generată o dată la
+  începutul pass 1, refolosită neschimbată la pass 2, ștearsă în
+  destructor — inclusiv fișierul însoțitor `.mbtree` al x264). `OpenCodec()`
+  rulează acum de DOUĂ ori per instanță pentru un job 2-pass (hostul
+  reapelează `DoOpen()` după ce `IsNeedNextPass()` a răspuns `true`) —
+  adăugat `FreeCodecResources()` (nou, apelat și din destructor) ca să nu
+  se scurgă `AVCodecContext`-ul întregii treceri 1 când se deschide
+  treacerea 2. `m_SuppressOutput` (true doar în pass 1): pachetele
+  encodate real din pass 1 NU se trimit niciodată către host/container —
+  pass 1 există EXCLUSIV ca să producă fișierul de statistici; trimiterea
+  lor ar fi dublat/corupt track-ul video odată ce pass 2 scrie din nou
+  aceleași cadre.
+- **Verificat real, nu presupus**: `cmake --build` curat (0 erori/
+  avertismente). Testul standalone descris mai sus confirmă mecanismul
+  FFmpeg de bază (partea cu adevărat incertă/nouă) end-to-end, cu date
+  reale, pe ambele codec-uri. **NU verificat**: comportamentul exact al
+  ORCHESTRĂRII la nivel de IOPlugin în DaVinci Resolve real — adică dacă
+  Resolve chiar reapelează `DoOpen()` pe ACEEAȘI instanță de obiect după
+  `IsNeedNextPass()==true` (presupunere rezonabilă din contractul
+  `wrapper/plugin_api.h`, dar niciodată exercitată până acum — `isMultiPass`
+  era hardcodat 0 dinainte de acest commit), și dacă Resolve acceptă
+  tăcut zero pachete de output în timpul pass 1 fără să considere asta o
+  eroare. **De confirmat de Cristi cu un export real, cu bifa activată**,
+  înainte de a considera acest feature complet dovedit — exact ca la
+  fiecare altă funcționalitate nouă a acestui plugin.
+- Versiune 1.4.2 → 1.5.0 (MINOR — funcționalitate nouă vizibilă în UI,
+  fără schimbare de arhitectură, Regula 14). Niciun tag creat/împins încă.

@@ -7,6 +7,9 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <atomic>
+#include <sstream>
+#include <filesystem>
 
 extern "C" {
 #include <libavutil/opt.h>
@@ -287,6 +290,9 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_KeyframeIntervalSec(2)
     , m_Level(0) // "Auto"
     , m_AdvancedParams("")
+    , m_MultiPassEnabled(false)
+    , m_PassNumber(1)
+    , m_SuppressOutput(false)
     , m_FrameCount(0)
     , m_PacketCount(0)
     , m_TotalBytesSent(0)
@@ -299,10 +305,49 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
 
 FFmpegEncoder::~FFmpegEncoder()
 {
-    if (m_pSwsCtx) sws_freeContext(m_pSwsCtx);
-    if (m_pFrame) av_frame_free(&m_pFrame);
-    if (m_pPacket) av_packet_free(&m_pPacket);
-    if (m_pCtx) avcodec_free_context(&m_pCtx);
+    FreeCodecResources();
+
+    // x264 writes a companion "<path>.mbtree" file alongside the main log
+    // (libx265 doesn't) — remove both, best-effort. Leaving these behind
+    // in the system temp dir after every 2-pass render would be real,
+    // if harmless, clutter.
+    if (!m_StatsFilePath.empty())
+    {
+        std::error_code ec;
+        std::filesystem::remove(m_StatsFilePath, ec);
+        std::filesystem::remove(m_StatsFilePath + ".mbtree", ec);
+    }
+}
+
+void FFmpegEncoder::FreeCodecResources()
+{
+    if (m_pSwsCtx) { sws_freeContext(m_pSwsCtx); m_pSwsCtx = nullptr; }
+    if (m_pFrame) av_frame_free(&m_pFrame);   // av_frame_free already NULLs the pointer
+    if (m_pPacket) av_packet_free(&m_pPacket); // ditto
+    if (m_pCtx) avcodec_free_context(&m_pCtx); // ditto
+}
+
+std::string FFmpegEncoder::MakeStatsFilePath() const
+{
+    // Unique per instance + per call (a static atomic counter, incremented
+    // every time a fresh pass-1 starts — including a second, independent
+    // 2-pass job reusing the same instance) so concurrent renders/tracks,
+    // or successive jobs, never collide on the same stats file.
+    static std::atomic<uint64_t> s_Counter{ 0 };
+    std::ostringstream oss;
+    oss << "gdc_2pass_" << std::hex << reinterpret_cast<uintptr_t>(this) << "_" << s_Counter.fetch_add(1) << ".log";
+    std::error_code ec;
+    auto path = std::filesystem::temp_directory_path(ec) / oss.str();
+    return ec ? oss.str() : path.string(); // fall back to a relative name if temp_directory_path() itself fails
+}
+
+bool FFmpegEncoder::IsNeedNextPass()
+{
+    // Only ever true right after pass 1 of a 2-pass job finishes (DoFlush
+    // has just drained the encoder — x264/x265 have written the complete
+    // stats file for pass 2 to read) — never on a single-pass job, and
+    // never after pass 2.
+    return m_MultiPassEnabled && (m_PassNumber == 1);
 }
 
 const EncoderVariant* FFmpegEncoder::s_FindVariant(const unsigned char* p_pUUID)
@@ -443,6 +488,7 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     int32_t keyframeIntervalSec = 2; // ~48-60 frames at 24-30fps — professional-delivery default, was hardcoded to a flat 12-frame GOP before
     int32_t level = 0;      // 0 = "Auto" (don't force a Level)
     std::string advancedParams; // raw x264-params/x265-params passthrough
+    uint8_t multiPass = 0;  // gdc_multipass checkbox
 
     p_pValues->GetINT32("gdc_quality_mode", qualityMode);
     p_pValues->GetINT32("gdc_crf", crf);
@@ -454,6 +500,7 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     p_pValues->GetINT32("gdc_keyframe_interval", keyframeIntervalSec);
     p_pValues->GetINT32("gdc_level", level);
     p_pValues->GetString("gdc_advanced_params", advancedParams);
+    p_pValues->GetUINT8("gdc_multipass", multiPass);
 
     {
         HostUIConfigEntryRef brandItem("gdc_brand_label");
@@ -605,6 +652,23 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         {
             return errFail;
         }
+
+        // 2-pass ABR — only meaningful in Target Bitrate mode, and only for
+        // software encoders (x264/x265 each have their own file-based 2-pass
+        // stats mechanism — "passlogfile"/"x265-stats" — hardware encoders
+        // don't). Real render time roughly doubles (two full passes over the
+        // source) in exchange for a more accurate bitrate/quality
+        // distribution than single-pass ABR — same trade-off as any NLE's
+        // "2-pass" export option.
+        if (!pVariant->isHardware)
+        {
+            HostUIConfigEntryRef multiPassItem("gdc_multipass");
+            multiPassItem.MakeCheckBox("2-Pass Encoding", "more accurate bitrate, ~2x render time", multiPass != 0);
+            if (!multiPassItem.IsSuccess() || !p_pSettingsList->Append(&multiPassItem))
+            {
+                return errFail;
+            }
+        }
     }
     else
     {
@@ -698,7 +762,11 @@ StatusCode FFmpegEncoder::FlushOneStep()
     m_TotalBytesSent += m_pPacket->size;
     g_Log(logLevelInfo, "GDC Encoder :: Flushed buffered packet #%d, %d bytes", static_cast<int>(m_PacketCount), m_pPacket->size);
 
-    StatusCode sts = SendPacketToHost(m_pPacket);
+    StatusCode sts = errNone;
+    if (!m_SuppressOutput) // see DrainPackets — pass 1 of a 2-pass job discards its output on purpose
+    {
+        sts = SendPacketToHost(m_pPacket);
+    }
     av_packet_unref(m_pPacket);
     if (sts != errNone)
     {
@@ -775,11 +843,47 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     p_pBuff->GetINT32("gdc_level", m_Level);
     p_pBuff->GetString("gdc_advanced_params", m_AdvancedParams);
 
+    // 2-pass only ever applies in ABR (bitrate) mode, software encoders —
+    // matches the condition under which the checkbox is even offered in
+    // s_GetEncoderSettings. Re-checked here too (not just trusted from the
+    // UI) in case a stale settings blob has the flag set from a render
+    // that was configured differently.
+    uint8_t multiPassRaw = 0;
+    p_pBuff->GetUINT8("gdc_multipass", multiPassRaw);
+    m_MultiPassEnabled = (multiPassRaw != 0) && (m_QualityMode == 1) && !m_pVariant->isHardware;
+
     return OpenCodec(p_pBuff);
 }
 
 StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
 {
+    // 2-pass: OpenCodec() now runs TWICE per instance for a multi-pass job
+    // (host calls DoOpen() again after IsNeedNextPass() returned true) — an
+    // existing m_pCtx at this point means this is pass 2, not a fresh
+    // instance. Advance the pass counter accordingly and free pass 1's
+    // AVCodecContext/frame/packet/sws context before allocating pass 2's;
+    // m_StatsFilePath is deliberately NOT touched here — pass 2 needs pass
+    // 1's stats file to still exist on disk (re-opened for reading below).
+    const bool isReopen = (m_pCtx != nullptr);
+    FreeCodecResources();
+    if (isReopen && m_MultiPassEnabled && (m_PassNumber == 1))
+    {
+        m_PassNumber = 2;
+    }
+    else
+    {
+        m_PassNumber = 1;
+        m_StatsFilePath.clear(); // a fresh path is generated below, once we know pass 1 is actually starting
+    }
+    m_SuppressOutput = m_MultiPassEnabled && (m_PassNumber == 1);
+    m_FrameCount = 0;
+    m_PacketCount = 0;
+    m_TotalBytesSent = 0;
+    m_EofSentToEncoder = false;
+    g_Log(logLevelInfo, "GDC Encoder :: OpenCodec — pass %d%s%s", static_cast<int>(m_PassNumber),
+          m_MultiPassEnabled ? "/2 (2-pass ABR)" : "/1 (single pass)",
+          m_SuppressOutput ? ", output SUPPRESSED (analysis pass)" : "");
+
     const AVCodec* pCodec = avcodec_find_encoder_by_name(m_pVariant->avCodecName);
     if (!pCodec)
     {
@@ -872,6 +976,11 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         m_pCtx->rc_buffer_size = static_cast<int>(m_pCtx->bit_rate);
     }
 
+    if (m_MultiPassEnabled)
+    {
+        m_pCtx->flags |= (m_PassNumber == 1) ? AV_CODEC_FLAG_PASS1 : AV_CODEC_FLAG_PASS2;
+    }
+
     AVDictionary* pOpts = nullptr;
     if (!m_pVariant->isHardware)
     {
@@ -894,6 +1003,25 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
             char qpStr[8];
             snprintf(qpStr, sizeof(qpStr), "%d", m_QP);
             av_dict_set(&pOpts, "qp", qpStr, 0);
+        }
+
+        // 2-pass ABR — x264 and x265 each have their OWN file-based stats
+        // option (NOT the generic AVCodecContext.stats_in/stats_out fields;
+        // verified directly with a standalone libavcodec test that those
+        // come back empty for both — `ffmpeg -h encoder=libx264`/`libx265`
+        // confirms the real option names below). AV_CODEC_FLAG_PASS1/PASS2
+        // (set above) tells the wrapper to write vs. read that file;
+        // m_StatsFilePath is generated once, at the start of pass 1, and
+        // reused unchanged for pass 2 — the file itself is cleaned up in
+        // the destructor.
+        if (m_MultiPassEnabled)
+        {
+            if (m_StatsFilePath.empty())
+            {
+                m_StatsFilePath = MakeStatsFilePath();
+            }
+            const char* statsOptKey = m_pVariant->isHEVC ? "x265-stats" : "passlogfile";
+            av_dict_set(&pOpts, statsOptKey, m_StatsFilePath.c_str(), 0);
         }
 
         // Profile forcing — H.264 8-bit software only (see
@@ -1062,7 +1190,11 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     // pass), even though the property doc says "absent" should also mean
     // single-pass. Matching the reference exactly since I've been wrong
     // about "should be equivalent" assumptions before in this exact spot.
-    uint8_t isMultiPass = 0;
+    // Now genuinely 1 when a 2-pass job is running — this is the signal
+    // that makes the host call IsNeedNextPass() at all after this pass's
+    // DoFlush(); leaving it hardcoded 0 (as before) would mean the host
+    // never asks, and pass 2 would simply never happen.
+    uint8_t isMultiPass = m_MultiPassEnabled ? 1 : 0;
     p_pBuff->SetProperty(pIOPropMultiPass, propTypeUInt8, &isMultiPass, 1);
 
     uint32_t temporalVal = 2;
@@ -1205,7 +1337,16 @@ StatusCode FFmpegEncoder::DrainPackets()
                   static_cast<int>(m_PacketCount), m_pPacket->size, static_cast<long long>(m_TotalBytesSent));
         }
 
-        StatusCode sts = SendPacketToHost(m_pPacket);
+        // Pass 1 of a 2-pass job exists purely to produce the stats log
+        // above — its actual encoded bytes are thrown away here, never
+        // forwarded to the host/container. Forwarding them too would mean
+        // the track receives two full encodes' worth of packets for the
+        // same PTS range once pass 2 runs right after.
+        StatusCode sts = errNone;
+        if (!m_SuppressOutput)
+        {
+            sts = SendPacketToHost(m_pPacket);
+        }
         av_packet_unref(m_pPacket);
         if (sts != errNone)
         {

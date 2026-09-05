@@ -115,7 +115,7 @@ cmake --build build --config Release
 
 - Sin soporte HDR (metadatos PQ/HLG) por ahora — previsto para una versión futura
 - El modo de 10 bits solo está disponible por software (x264/x265), no por hardware
-- Sin renderizado multi-pasada — solo una pasada actualmente
+- Codificación 2-Pass disponible solo en variantes software (x264/x265), modo Target Bitrate — no en hardware (VideoToolbox/NVENC)
 - El CRF en codificadores por hardware (VideoToolbox/NVENC) cae automáticamente a un bitrate fijo, no a una calidad constante real — el hardware no expone CRF igual que x264/x265
 
 ## Licencia

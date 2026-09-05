@@ -118,7 +118,7 @@ cmake --build build --config Release
 
 - Fără suport HDR (metadate PQ/HLG) momentan — planificat pentru o versiune viitoare
 - 10-bit disponibil doar pe variantele software (x264/x265), nu și hardware
-- Fără randare multi-pass — o singură trecere momentan
+- 2-Pass Encoding disponibil doar pe variantele software (x264/x265), în modul Target Bitrate — nu pe hardware (VideoToolbox/NVENC)
 - CRF pe encoderele hardware (VideoToolbox/NVENC) cade automat pe un bitrate fix, nu o calitate constantă reală — hardware-ul nu expune CRF la fel ca x264/x265
 
 ## Licență
