@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "ffmpeg_encoder.h"
 #include "license_check.h"
 
@@ -387,7 +388,13 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
 
         uint32_t bitDepthVal = static_cast<uint32_t>(v.bitDepth);
         codecInfo.SetProperty(pIOPropBitDepth, propTypeUInt32, &bitDepthVal, 1);
-        codecInfo.SetProperty(pIOPropBitsPerSample, propTypeUInt32, &bitDepthVal, 1);
+        // clrYUVp 4:2:0 only allows 8 or 16 bit SAMPLES (see IOPluginProps.h);
+        // declaring sampleBits=10 made Resolve reject every 10-bit variant
+        // ("Pixel Format was not defined"). 10-bit = 16-bit container, 10
+        // meaningful bits (bitDepth). Sample alignment inside the container
+        // is verified at runtime, see FillFrameFromBuffer.
+        uint32_t sampleBitsVal = (v.bitDepth > 8) ? 16u : 8u;
+        codecInfo.SetProperty(pIOPropBitsPerSample, propTypeUInt32, &sampleBitsVal, 1);
 
         // 0 here at registration time (the static capability declaration);
         // DoOpen() sets this to 2 later, on the per-instance buffer, once a
@@ -855,11 +862,13 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         AVColorTransferCharacteristic trc = AVCOL_TRC_BT709;
         AVColorSpace mtx = AVCOL_SPC_BT709;
 
-        if (havePri && (rawPri == AVCOL_PRI_BT709 || rawPri == AVCOL_PRI_BT2020 || rawPri == AVCOL_PRI_SMPTE432))
-            pri = static_cast<AVColorPrimaries>(rawPri); // Rec.709 / Rec.2020 / P3-D65
+        if (havePri && (rawPri == AVCOL_PRI_BT709 || rawPri == AVCOL_PRI_BT2020 ||
+                        rawPri == AVCOL_PRI_SMPTE431 || rawPri == AVCOL_PRI_SMPTE432))
+            pri = static_cast<AVColorPrimaries>(rawPri); // Rec.709 / Rec.2020 / P3-DCI (11) / P3-D65 (12); host numbering CICP, verified in Resolve 21.1
         if (haveTrc && (rawTrc == AVCOL_TRC_BT709 || rawTrc == AVCOL_TRC_SMPTE2084 ||
-                        rawTrc == AVCOL_TRC_ARIB_STD_B67 || rawTrc == AVCOL_TRC_BT2020_10))
-            trc = static_cast<AVColorTransferCharacteristic>(rawTrc); // 709 / PQ / HLG
+                        rawTrc == AVCOL_TRC_ARIB_STD_B67 || rawTrc == AVCOL_TRC_BT2020_10 ||
+                        rawTrc == AVCOL_TRC_SMPTE428))
+            trc = static_cast<AVColorTransferCharacteristic>(rawTrc); // 709 / PQ / HLG / SMPTE428 (DCI 2.6, host sends 17 for P3 outputs)
         else if (pri == AVCOL_PRI_BT2020)
             trc = AVCOL_TRC_BT2020_10; // wide gamut, no transfer signalled
 
@@ -1124,7 +1133,7 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     // source layout, no conversion is needed at all; otherwise (hardware
     // encoders wanting NV12, etc.) go through swscale.
     const bool is10Bit = (m_pVariant->bitDepth == 10);
-    const AVPixelFormat srcFmt = is10Bit ? AV_PIX_FMT_YUV420P10LE : AV_PIX_FMT_YUV420P;
+    const AVPixelFormat srcFmt = is10Bit ? AV_PIX_FMT_YUV420P16LE : AV_PIX_FMT_YUV420P; // host 10-bit = 16-bit container (value<<6)
     const int bytesPerSample = is10Bit ? 2 : 1;
 
     const uint8_t* pSrcData[4] = {};
@@ -1136,7 +1145,28 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     pSrcData[2] = pSrcData[1] + ((static_cast<size_t>(width) / 2) * (height / 2) * bytesPerSample);
     srcLinesize[2] = (static_cast<int>(width) / 2) * bytesPerSample;
 
-    if (static_cast<AVPixelFormat>(p_pFrame->format) == srcFmt)
+    if (is10Bit && static_cast<AVPixelFormat>(p_pFrame->format) == AV_PIX_FMT_YUV420P10LE)
+    {
+        // Verified in Resolve 21.1 (first-frame diagnostic: Y max=57155):
+        // the host delivers 10-bit as FULL 16-bit samples (value << 6), not
+        // low-aligned 10-bit. Convert 16 -> 10 bit with rounding, clamped.
+        for (int plane = 0; plane < 3; ++plane)
+        {
+            const int pw = plane ? static_cast<int>(width) / 2 : static_cast<int>(width);
+            const int ph = plane ? static_cast<int>(height) / 2 : static_cast<int>(height);
+            for (int y = 0; y < ph; ++y)
+            {
+                const uint16_t* pS = reinterpret_cast<const uint16_t*>(pSrcData[plane] + static_cast<size_t>(y) * srcLinesize[plane]);
+                uint16_t* pD = reinterpret_cast<uint16_t*>(p_pFrame->data[plane] + static_cast<size_t>(y) * p_pFrame->linesize[plane]);
+                for (int x = 0; x < pw; ++x)
+                {
+                    const uint32_t v = (static_cast<uint32_t>(pS[x]) + 32u) >> 6;
+                    pD[x] = static_cast<uint16_t>(v > 1023u ? 1023u : v);
+                }
+            }
+        }
+    }
+    else if (static_cast<AVPixelFormat>(p_pFrame->format) == srcFmt)
     {
         av_image_copy(p_pFrame->data, p_pFrame->linesize, pSrcData, srcLinesize, srcFmt,
                        static_cast<int>(width), static_cast<int>(height));
@@ -1156,6 +1186,24 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
             return errFail;
         }
         sws_scale(m_pSwsCtx, pSrcData, srcLinesize, 0, height, p_pFrame->data, p_pFrame->linesize);
+    }
+
+    if (is10Bit && m_FrameCount == 0)
+    {
+        // One-off diagnostic: raw range of the host's 16-bit container
+        // (10-bit content arrives as value<<6, so max ~ 60160 for legal white).
+        const uint16_t* pY = reinterpret_cast<const uint16_t*>(pSrcData[0]);
+        const size_t n = static_cast<size_t>(width) * height;
+        uint16_t maxV = 0, minV = 0xFFFF;
+        uint16_t orAll = 0;
+        for (size_t i = 0; i < n; i += 7)
+        {
+            maxV = std::max(maxV, pY[i]);
+            minV = std::min(minV, pY[i]);
+            orAll |= pY[i];
+        }
+        g_Log(logLevelInfo, "GDC Encoder :: 10-bit first frame Y: min=%u max=%u lowBitsSet=%d",
+              static_cast<unsigned>(minV), static_cast<unsigned>(maxV), (orAll & 0x3F) ? 1 : 0);
     }
 
     p_pBuff->UnlockBuffer();

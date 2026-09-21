@@ -5,6 +5,12 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.4.4 (2026-09-21) — Export 10-bit funcțional + etichete corecte pentru HDR și P3
+
+- **Variantele 10-bit (H.264 High10, H.265 Main10) apar acum în lista de codecuri** din Resolve. Înainte erau înregistrate, dar Resolve le refuza.
+- **Imagine corectă la 10-bit**: exporturile 10-bit ieșeau grav supraexpuse și de câteva ori mai mari decât ar fi trebuit. Acum nivelurile sunt corecte și dimensiunea fișierului e normală.
+- **Etichete de culoare pentru HDR și P3**: PQ, HLG, P3-D65 și P3-DCI sunt semnalate corect și în fluxul video, nu doar în container. Înainte, un export P3 purta etichete contradictorii.
+
 ## v1.4.3 (2026-09-21) — Culori corecte în fișierele exportate + robustețe
 
 - **Etichete de culoare corecte**: fișierul exportat poartă acum spațiul de culoare real cerut de proiect (Rec.709, Rec.2020, P3-D65; transfer PQ sau HLG). Înainte, orice export 10-bit era etichetat automat Rec.2020, indiferent de proiect. Dacă informația lipsește, se folosește Rec.709.
