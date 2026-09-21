@@ -1,6 +1,7 @@
 #include "wrapper/plugin_api.h"
 #include "ffmpeg_encoder.h"
 #include "encoder_variants.h"
+#include "gdc_container.h"
 
 #include <cstring>
 #include <cstdio>
@@ -53,7 +54,14 @@ StatusCode g_HandleCreateObj(unsigned char* p_pUUID, ObjectRef* p_ppObj)
         *p_ppObj = new FFmpegEncoder(pVariant);
         return errNone;
     }
-    g_Log(logLevelInfo, "GDC Encoder :: UUID did not match any of our %d variants (not for us)", g_NumEncoderVariants);
+    const ContainerFormat* pContainer = GdcContainer::s_FindFormat(p_pUUID);
+    if (pContainer)
+    {
+        g_Log(logLevelInfo, "GDC Container :: UUID matched container '%s', creating object", pContainer->displayName);
+        *p_ppObj = new GdcContainer(pContainer);
+        return errNone;
+    }
+    g_Log(logLevelInfo, "GDC Encoder :: UUID did not match any of our %d variants or containers (not for us)", g_NumEncoderVariants);
     return errUnsupported;
 }
 
@@ -81,9 +89,10 @@ StatusCode g_ListCodecs(HostListRef* p_pList)
 
 StatusCode g_ListContainers(HostListRef* p_pList)
 {
-    // This plugin only supplies codecs, not container writers — Resolve's
-    // own mp4/mov writer handles muxing using the codecs registered above.
-    return errNone;
+    // Own containers (libavformat): top-level Formats in Deliver that also
+    // write HDR static metadata into the file. The codecs stay available
+    // under Resolve's own QuickTime/MP4/MKV too (see s_RegisterCodecs).
+    return GdcContainer::s_Register(p_pList);
 }
 
 StatusCode g_GetEncoderSettings(unsigned char* p_pUUID, HostPropertyCollectionRef* p_pValues, HostListRef* p_pSettingsList)

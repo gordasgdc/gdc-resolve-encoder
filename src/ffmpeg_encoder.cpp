@@ -1,6 +1,7 @@
 #include <algorithm>
 #include "ffmpeg_encoder.h"
 #include "license_check.h"
+#include "gdc_container.h"
 
 #include <cstring>
 #include <cmath>
@@ -452,6 +453,10 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         codecInfo.SetProperty(pIOPropHWAcc, propTypeUInt8, &hwAcc, 1);
 
         std::vector<std::string> containerVec = { "mov", "mp4", "mkv" };
+        for (int c = 0; c < g_NumContainerFormats; ++c)
+        {
+            containerVec.push_back(GdcContainer::s_UUIDHex(g_ContainerFormats[c]));
+        }
         std::string valStrings;
         for (size_t c = 0; c < containerVec.size(); ++c)
         {
@@ -992,6 +997,7 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     }
 
     AVDictionary* pOpts = nullptr;
+    std::string hdrMdcv, hdrCll; // handed to the GDC container (mdcv/clli boxes)
     if (!m_pVariant->isHardware)
     {
         static const char* s_PresetNames[] = { "ultrafast", "superfast", "veryfast", "faster", "fast", "medium", "slow", "slower", "veryslow" };
@@ -1072,9 +1078,11 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
             {
                 const char* mdKey = m_pVariant->isHEVC ? "master-display" : "mastering-display";
                 const char* cllKey = m_pVariant->isHEVC ? "max-cll" : "cll";
-                codecParams = std::string(mdKey) + "=" + BuildMasterDisplay(m_HdrPrimaries, m_HdrMaxLum);
+                hdrMdcv = BuildMasterDisplay(m_HdrPrimaries, m_HdrMaxLum);
+                codecParams = std::string(mdKey) + "=" + hdrMdcv;
                 if (m_HdrMaxCLL > 0 || m_HdrMaxFALL > 0)
                 {
+                    hdrCll = std::to_string(m_HdrMaxCLL) + "," + std::to_string(m_HdrMaxFALL);
                     codecParams += std::string(":") + cllKey + "=" + std::to_string(m_HdrMaxCLL) + "," + std::to_string(m_HdrMaxFALL);
                 }
                 g_Log(logLevelInfo, "GDC Encoder :: HDR10 params applied: %s", codecParams.c_str());
@@ -1189,6 +1197,22 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         {
             g_Log(logLevelError, "GDC Encoder :: Cookie build produced EMPTY result (isHEVC=%d)", m_pVariant->isHEVC ? 1 : 0);
         }
+    }
+
+    // Color tags + HDR static metadata for the GDC container (custom props
+    // on this codec buffer, read back in GdcContainer::AddVideoTrack). Resolve's
+    // own writers ignore them; harmless there.
+    {
+        int32_t v = static_cast<int32_t>(m_pCtx->color_primaries);
+        p_pBuff->SetProperty("gdc_pri", propTypeInt32, &v, 1);
+        v = static_cast<int32_t>(m_pCtx->color_trc);
+        p_pBuff->SetProperty("gdc_trc", propTypeInt32, &v, 1);
+        v = static_cast<int32_t>(m_pCtx->colorspace);
+        p_pBuff->SetProperty("gdc_mtx", propTypeInt32, &v, 1);
+        v = m_CommonProps.IsFullRange() ? 1 : 0;
+        p_pBuff->SetProperty("gdc_range", propTypeInt32, &v, 1);
+        if (!hdrMdcv.empty()) p_pBuff->SetProperty("gdc_mdcv", propTypeString, hdrMdcv.c_str(), hdrMdcv.size());
+        if (!hdrCll.empty()) p_pBuff->SetProperty("gdc_cll", propTypeString, hdrCll.c_str(), hdrCll.size());
     }
 
     m_pFrame = av_frame_alloc();

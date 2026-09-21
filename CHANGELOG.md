@@ -5,6 +5,15 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.7.0 (2026-09-21) — Formate proprii: GDC QuickTime, GDC MP4, GDC Matroska (cu HDR în fișier)
+
+- **Trei formate noi în lista Format din Deliver**: `GDC QuickTime`, `GDC MP4` și `GDC Matroska`. Nu mai trebuie să alegi întâi QuickTime și apoi codecul: alegi formatul GDC și codecul GDC direct, cu setările plugin-ului (inclusiv HDR10) imediat dedesubt.
+- **Metadata HDR10 scrisă și în fișier**: pe lângă fluxul video, containerul conține acum și datele de mastering display și MaxCLL/MaxFALL, pe care QuickTime-ul din Resolve nu le scria. Playerele care citesc doar containerul recunosc astfel HDR10.
+- Etichetele de culoare (primare, transfer, matrice) sunt scrise și în container.
+- Sunet: PCM necomprimat (16, 24 sau 32 de biți), scris neschimbat. În MP4 sunetul PCM are suport limitat în unele playere; pentru MP4 cu audio compatibil peste tot folosește MP4-ul din Resolve cu codecul GDC.
+- Formatele din Resolve (QuickTime, MP4, MKV) rămân disponibile cu aceleași codecuri, ca înainte.
+- Limitări: nu se scriu încă timecode-ul de start și markerele; video doar H.264/H.265 din plugin.
+
 ## v1.6.0 (2026-09-21) — Export 4:2:2 10-bit (H.264 și H.265)
 
 - **Două variante noi de codec** în Resolve: `GDC H.264 4:2:2 10-bit (Software x264 High 4:2:2)` și `GDC H.265 4:2:2 10-bit (Software x265 Main 4:2:2 10)`, pentru livrări care cer crominanță completă pe verticală.
