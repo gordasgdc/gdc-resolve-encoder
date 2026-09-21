@@ -5,6 +5,12 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.5.0 (2026-09-21) — Metadata HDR10 (MaxCLL / MaxFALL) pentru exporturi PQ
+
+- **Grup nou „HDR10 Metadata”** în panoul plugin-ului (variantele software H.264 și H.265): comutator `Off` / `On (PQ exports only)`, primarele de mastering (P3-D65 sau Rec.2020), luminanța maximă a display-ului de mastering (100–10000 nits), MaxCLL și MaxFALL.
+- Valorile se scriu în fluxul video, unde le citesc playerele și platformele HDR. Implicit este `Off`, deci exporturile existente nu se schimbă.
+- Se aplică doar pe exporturi PQ (Rec.2100 ST2084).
+
 ## v1.4.4 (2026-09-21) — Export 10-bit funcțional + etichete corecte pentru HDR și P3
 
 - **Variantele 10-bit (H.264 High10, H.265 Main10) apar acum în lista de codecuri** din Resolve. Înainte erau înregistrate, dar Resolve le refuza.

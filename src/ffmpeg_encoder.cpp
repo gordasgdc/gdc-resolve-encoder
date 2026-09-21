@@ -284,6 +284,27 @@ static void SplitAnnexBNALs(const uint8_t* p_pData, int p_Size, std::vector<std:
     }
 }
 
+
+// ─── HDR10 static metadata (mastering display + content light level) ───
+// Resolve 21.1 does NOT hand the hdrPrimaries/hdrWhite/hdrMasterLum/hdrMaxCLL/
+// hdrMaxFALL props to the encoder at any stage (verified: 0 of 5 present in
+// DoInit, DoOpen and on the first frame, with hdrMasteringOn=1 in the
+// project), so the values come from this plugin's own settings panel.
+// Units follow x264/x265: chromaticity in 0.00002, luminance in 0.0001 cd/m2.
+static std::string BuildMasterDisplay(int p_PrimariesIdx, int p_MaxLumNits)
+{
+    char buf[200];
+    if (p_PrimariesIdx == 1) // Rec.2020, D65
+    {
+        snprintf(buf, sizeof(buf), "G(8500,39850)B(6550,2300)R(35400,14600)WP(15635,16450)L(%d,50)", p_MaxLumNits * 10000);
+    }
+    else // P3-D65 (default: the usual HDR10 grading display)
+    {
+        snprintf(buf, sizeof(buf), "G(13250,34500)B(7500,3000)R(34000,16000)WP(15635,16450)L(%d,50)", p_MaxLumNits * 10000);
+    }
+    return buf;
+}
+
 // ─────────────────────────────────────────────────────────────────────────
 
 FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
@@ -302,6 +323,11 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_KeyframeIntervalSec(2)
     , m_Level(0) // "Auto"
     , m_AdvancedParams("")
+    , m_Hdr10Mode(0)
+    , m_HdrPrimaries(0)
+    , m_HdrMaxLum(1000)
+    , m_HdrMaxCLL(0)
+    , m_HdrMaxFALL(0)
     , m_FrameCount(0)
     , m_PacketCount(0)
     , m_TotalBytesSent(0)
@@ -475,6 +501,16 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     p_pValues->GetINT32("gdc_keyframe_interval", keyframeIntervalSec);
     p_pValues->GetINT32("gdc_level", level);
     p_pValues->GetString("gdc_advanced_params", advancedParams);
+    int32_t hdr10Mode = 0;
+    int32_t hdrPrimaries = 0;
+    int32_t hdrMaxLum = 1000;
+    int32_t hdrMaxCLL = 0;
+    int32_t hdrMaxFALL = 0;
+    p_pValues->GetINT32("gdc_hdr10_mode", hdr10Mode);
+    p_pValues->GetINT32("gdc_hdr_primaries", hdrPrimaries);
+    p_pValues->GetINT32("gdc_hdr_maxlum", hdrMaxLum);
+    p_pValues->GetINT32("gdc_hdr_maxcll", hdrMaxCLL);
+    p_pValues->GetINT32("gdc_hdr_maxfall", hdrMaxFALL);
 
     {
         HostUIConfigEntryRef brandItem("gdc_brand_label");
@@ -665,6 +701,62 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         }
     }
 
+    if (!pVariant->isHardware)
+    {
+        // HDR10 static metadata (SEI). The host does not supply it (see
+        // BuildMasterDisplay), so it is set here. Only written when the
+        // export is PQ; off by default so existing deliveries are unchanged.
+        {
+            HostUIConfigEntryRef modeItem("gdc_hdr10_mode");
+            std::vector<std::string> texts = { "Off", "On (PQ exports only)" };
+            std::vector<int32_t> values = { 0, 1 };
+            modeItem.MakeComboBox("HDR10 Metadata", texts, values, hdr10Mode);
+            modeItem.SetTriggersUpdate(true);
+            if (!modeItem.IsSuccess() || !p_pSettingsList->Append(&modeItem))
+            {
+                return errFail;
+            }
+        }
+
+        if (hdr10Mode > 0)
+        {
+            {
+                HostUIConfigEntryRef primItem("gdc_hdr_primaries");
+                std::vector<std::string> texts = { "P3-D65", "Rec.2020" };
+                std::vector<int32_t> values = { 0, 1 };
+                primItem.MakeComboBox("Mastering Primaries", texts, values, hdrPrimaries);
+                if (!primItem.IsSuccess() || !p_pSettingsList->Append(&primItem))
+                {
+                    return errFail;
+                }
+            }
+            {
+                HostUIConfigEntryRef lumItem("gdc_hdr_maxlum");
+                lumItem.MakeSlider("Mastering Peak", "nits", hdrMaxLum, 100, 10000, 1000, 50);
+                if (!lumItem.IsSuccess() || !p_pSettingsList->Append(&lumItem))
+                {
+                    return errFail;
+                }
+            }
+            {
+                HostUIConfigEntryRef cllItem("gdc_hdr_maxcll");
+                cllItem.MakeSlider("MaxCLL", "nits, 0 = not signalled", hdrMaxCLL, 0, 10000, 0, 10);
+                if (!cllItem.IsSuccess() || !p_pSettingsList->Append(&cllItem))
+                {
+                    return errFail;
+                }
+            }
+            {
+                HostUIConfigEntryRef fallItem("gdc_hdr_maxfall");
+                fallItem.MakeSlider("MaxFALL", "nits, 0 = not signalled", hdrMaxFALL, 0, 4000, 0, 10);
+                if (!fallItem.IsSuccess() || !p_pSettingsList->Append(&fallItem))
+                {
+                    return errFail;
+                }
+            }
+        }
+    }
+
     return errNone;
 }
 
@@ -795,6 +887,11 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     p_pBuff->GetINT32("gdc_keyframe_interval", m_KeyframeIntervalSec);
     p_pBuff->GetINT32("gdc_level", m_Level);
     p_pBuff->GetString("gdc_advanced_params", m_AdvancedParams);
+    p_pBuff->GetINT32("gdc_hdr10_mode", m_Hdr10Mode);
+    p_pBuff->GetINT32("gdc_hdr_primaries", m_HdrPrimaries);
+    p_pBuff->GetINT32("gdc_hdr_maxlum", m_HdrMaxLum);
+    p_pBuff->GetINT32("gdc_hdr_maxcll", m_HdrMaxCLL);
+    p_pBuff->GetINT32("gdc_hdr_maxfall", m_HdrMaxFALL);
 
     return OpenCodec(p_pBuff);
 }
@@ -965,10 +1062,37 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         // x264_param_parse/x265_param_parse; a malformed string is
         // rejected by that parser (avcodec_open2 fails cleanly with an
         // error already logged below), it doesn't crash the plugin.
+        // HDR10 static metadata — only when enabled in the panel AND the
+        // export is PQ. User-supplied advanced params are appended AFTER, so
+        // an explicit master-display/max-cll there still wins.
+        std::string codecParams;
+        if (m_Hdr10Mode > 0)
+        {
+            if (m_pCtx->color_trc == AVCOL_TRC_SMPTE2084)
+            {
+                const char* mdKey = m_pVariant->isHEVC ? "master-display" : "mastering-display";
+                const char* cllKey = m_pVariant->isHEVC ? "max-cll" : "cll";
+                codecParams = std::string(mdKey) + "=" + BuildMasterDisplay(m_HdrPrimaries, m_HdrMaxLum);
+                if (m_HdrMaxCLL > 0 || m_HdrMaxFALL > 0)
+                {
+                    codecParams += std::string(":") + cllKey + "=" + std::to_string(m_HdrMaxCLL) + "," + std::to_string(m_HdrMaxFALL);
+                }
+                g_Log(logLevelInfo, "GDC Encoder :: HDR10 params applied: %s", codecParams.c_str());
+            }
+            else
+            {
+                g_Log(logLevelInfo, "GDC Encoder :: HDR10 metadata requested but the export is not PQ - skipped");
+            }
+        }
         if (!m_AdvancedParams.empty())
         {
+            if (!codecParams.empty()) codecParams += ":";
+            codecParams += m_AdvancedParams;
+        }
+        if (!codecParams.empty())
+        {
             const char* paramKey = m_pVariant->isHEVC ? "x265-params" : "x264-params";
-            av_dict_set(&pOpts, paramKey, m_AdvancedParams.c_str(), 0);
+            av_dict_set(&pOpts, paramKey, codecParams.c_str(), 0);
         }
     }
     else

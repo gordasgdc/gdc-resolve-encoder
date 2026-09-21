@@ -67,6 +67,11 @@ private:
     int32_t m_KeyframeIntervalSec; // GOP length, in seconds — converted to frames from the real source frame rate in OpenCodec
     int32_t m_Level; // index into s_LevelNames, 0 = "Auto" (don't set explicitly)
     std::string m_AdvancedParams; // raw x264-params/x265-params passthrough, MainConcept-style "expert" field
+    int32_t m_Hdr10Mode;    // 0 = off, 1 = write HDR10 SEI when the export is PQ
+    int32_t m_HdrPrimaries; // 0 = P3-D65, 1 = Rec.2020
+    int32_t m_HdrMaxLum;    // mastering display peak, nits
+    int32_t m_HdrMaxCLL;    // nits, 0 = not signalled
+    int32_t m_HdrMaxFALL;   // nits, 0 = not signalled
 
     int64_t m_FrameCount;
     int64_t m_PacketCount;
