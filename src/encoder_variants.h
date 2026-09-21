@@ -50,6 +50,7 @@ struct EncoderVariant
     int bitDepth;               // 8 or 10 — drives pIOPropBitDepth and which
                                  // 8-bit vs 10-bit source buffer layout
                                  // FillFrameFromBuffer expects from Resolve
+    bool is422 = false;          // 4:2:2 chroma (vSubsampling 1); default 4:2:0
 };
 
 // NOTE: these UUIDs are unique to GDC Resolve Encoder. If you fork this
@@ -91,6 +92,17 @@ static const EncoderVariant g_EncoderVariants[] = {
     {
         { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x08 },
         "libx265", "GDC H.265 10-bit (Software x265 Main10)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, false, AV_PIX_FMT_YUV420P10LE, 10,
+    },
+    // 4:2:2 10-bit, software only (VideoToolbox/NVENC don't offer 4:2:2 for
+    // H.264/HEVC). Host container: clrYUVp 4:2:2 allows 8/16-bit samples
+    // (IOPluginProps.h) -> same 16-bit container as the 4:2:0 10-bit variants.
+    {
+        { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x09 },
+        "libx264", "GDC H.264 4:2:2 10-bit (Software x264 High 4:2:2)", "GDC Encoder", GDC_FOURCC('a','v','c','1'), false, false, AV_PIX_FMT_YUV422P10LE, 10, true,
+    },
+    {
+        { 0x9a, 0x1c, 0x3e, 0x02, 0x6b, 0x77, 0x4f, 0x10, 0x8e, 0x21, 0x0c, 0x4f, 0x2a, 0x91, 0x7d, 0x0a },
+        "libx265", "GDC H.265 4:2:2 10-bit (Software x265 Main 4:2:2 10)", "GDC Encoder", GDC_FOURCC('h','v','c','1'), true, false, AV_PIX_FMT_YUV422P10LE, 10, true,
     },
 };
 

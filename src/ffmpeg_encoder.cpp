@@ -408,7 +408,7 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         std::vector<uint8_t> dataRangeVec = { 0, 1 }; // 0=video range (default), 1=full range also offered
         codecInfo.SetProperty(pIOPropDataRange, propTypeUInt8, dataRangeVec.data(), static_cast<int>(dataRangeVec.size()));
 
-        uint8_t hSampling = 2, vSampling = 2; // 4:2:0, confirmed proven working
+        uint8_t hSampling = 2, vSampling = v.is422 ? 1 : 2; // 4:2:0 confirmed; 4:2:2 = full vertical chroma
         codecInfo.SetProperty(pIOPropHSubsampling, propTypeUInt8, &hSampling, 1);
         codecInfo.SetProperty(pIOPropVSubsampling, propTypeUInt8, &vSampling, 1);
 
@@ -1232,9 +1232,9 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
 
     // 4:2:0 chroma planes are (w/2)x(h/2) below: odd dimensions would read
     // past the tightly packed source layout. Refuse instead of corrupting.
-    if ((width & 1u) || (height & 1u))
+    if ((width & 1u) || (!m_pVariant->is422 && (height & 1u)))
     {
-        g_Log(logLevelError, "GDC Encoder :: odd frame size %ux%u not supported for 4:2:0 planar input", width, height);
+        g_Log(logLevelError, "GDC Encoder :: odd frame size %ux%u not supported for subsampled planar input", width, height);
         p_pBuff->UnlockBuffer();
         return errFail;
     }
@@ -1257,7 +1257,10 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     // source layout, no conversion is needed at all; otherwise (hardware
     // encoders wanting NV12, etc.) go through swscale.
     const bool is10Bit = (m_pVariant->bitDepth == 10);
-    const AVPixelFormat srcFmt = is10Bit ? AV_PIX_FMT_YUV420P16LE : AV_PIX_FMT_YUV420P; // host 10-bit = 16-bit container (value<<6)
+    const bool is422 = m_pVariant->is422;
+    const AVPixelFormat srcFmt = is10Bit ? (is422 ? AV_PIX_FMT_YUV422P16LE : AV_PIX_FMT_YUV420P16LE)
+                                         : (is422 ? AV_PIX_FMT_YUV422P : AV_PIX_FMT_YUV420P); // host 10-bit = 16-bit container (value<<6)
+    const size_t chromaH = is422 ? height : (height / 2);
     const int bytesPerSample = is10Bit ? 2 : 1;
 
     const uint8_t* pSrcData[4] = {};
@@ -1266,10 +1269,10 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     srcLinesize[0] = static_cast<int>(width) * bytesPerSample;
     pSrcData[1] = pSrcData[0] + (static_cast<size_t>(width) * height * bytesPerSample);
     srcLinesize[1] = (static_cast<int>(width) / 2) * bytesPerSample;
-    pSrcData[2] = pSrcData[1] + ((static_cast<size_t>(width) / 2) * (height / 2) * bytesPerSample);
+    pSrcData[2] = pSrcData[1] + ((static_cast<size_t>(width) / 2) * chromaH * bytesPerSample);
     srcLinesize[2] = (static_cast<int>(width) / 2) * bytesPerSample;
 
-    if (is10Bit && static_cast<AVPixelFormat>(p_pFrame->format) == AV_PIX_FMT_YUV420P10LE)
+    if (is10Bit && static_cast<AVPixelFormat>(p_pFrame->format) == (is422 ? AV_PIX_FMT_YUV422P10LE : AV_PIX_FMT_YUV420P10LE))
     {
         // Verified in Resolve 21.1 (first-frame diagnostic: Y max=57155):
         // the host delivers 10-bit as FULL 16-bit samples (value << 6), not
@@ -1277,7 +1280,7 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
         for (int plane = 0; plane < 3; ++plane)
         {
             const int pw = plane ? static_cast<int>(width) / 2 : static_cast<int>(width);
-            const int ph = plane ? static_cast<int>(height) / 2 : static_cast<int>(height);
+            const int ph = plane ? static_cast<int>(chromaH) : static_cast<int>(height);
             for (int y = 0; y < ph; ++y)
             {
                 const uint16_t* pS = reinterpret_cast<const uint16_t*>(pSrcData[plane] + static_cast<size_t>(y) * srcLinesize[plane]);
@@ -1326,8 +1329,8 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
             minV = std::min(minV, pY[i]);
             orAll |= pY[i];
         }
-        g_Log(logLevelInfo, "GDC Encoder :: 10-bit first frame Y: min=%u max=%u lowBitsSet=%d",
-              static_cast<unsigned>(minV), static_cast<unsigned>(maxV), (orAll & 0x3F) ? 1 : 0);
+        g_Log(logLevelInfo, "GDC Encoder :: 10-bit%s first frame Y: min=%u max=%u lowBitsSet=%d",
+              is422 ? " 4:2:2" : "", static_cast<unsigned>(minV), static_cast<unsigned>(maxV), (orAll & 0x3F) ? 1 : 0);
     }
 
     p_pBuff->UnlockBuffer();

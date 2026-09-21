@@ -5,6 +5,12 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.6.0 (2026-09-21) — Export 4:2:2 10-bit (H.264 și H.265)
+
+- **Două variante noi de codec** în Resolve: `GDC H.264 4:2:2 10-bit (Software x264 High 4:2:2)` și `GDC H.265 4:2:2 10-bit (Software x265 Main 4:2:2 10)`, pentru livrări care cer crominanță completă pe verticală.
+- Funcționează cu aceleași setări ca variantele existente (calitate, preset, HDR10 Metadata, etichete de culoare).
+- Doar software: codificarea hardware (VideoToolbox) nu oferă 4:2:2 pentru H.264/H.265.
+
 ## v1.5.0 (2026-09-21) — Metadata HDR10 (MaxCLL / MaxFALL) pentru exporturi PQ
 
 - **Grup nou „HDR10 Metadata”** în panoul plugin-ului (variantele software H.264 și H.265): comutator `Off` / `On (PQ exports only)`, primarele de mastering (P3-D65 sau Rec.2020), luminanța maximă a display-ului de mastering (100–10000 nits), MaxCLL și MaxFALL.
