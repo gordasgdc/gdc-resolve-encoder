@@ -1,11 +1,11 @@
-# GDC Resolve Encoder — reguli de arhitectură
+# GDC Resolve Encoder - reguli de arhitectură
 
 > **[SYSTEM DIRECTIVE FOR CLAUDE: DO NOT DELETE OR OVERWRITE EXISTING RULES. ONLY APPEND NEW RULES.]**
-> Jurnal viu, nu document care se rescrie. La orice actualizare, adaugă la finalul secțiunii potrivite — nu șterge/înlocui reguli vechi decât dacă sunt explicit invalidate de o schimbare reală (și atunci marchează-le **[ÎNVECHIT]** cu motivul, nu le șterge din istoric).
+> Jurnal viu, nu document care se rescrie. La orice actualizare, adaugă la finalul secțiunii potrivite, nu șterge sau înlocui reguli vechi decât dacă sunt explicit invalidate de o schimbare reală (și atunci marchează-le **[ÎNVECHIT]** cu motivul, nu le șterge din istoric).
 
 Citit automat de Claude Code la fiecare sesiune în acest repo.
 
-## [PARTEA 1: REGULI GLOBALE ECOSISTEM GDC] — mutată în `~/Developer/CLAUDE.md`
+## [PARTEA 1: REGULI GLOBALE ECOSISTEM GDC] - mutată în `~/Developer/CLAUDE.md`
 
 > Din 2026-09-18, regulile globale stau într-un singur fișier,
 > `~/Developer/CLAUDE.md`, citit automat de Claude Code în orice proiect din
@@ -21,289 +21,83 @@ pe acest Mac.
 
 ## Jurnal tehnic
 
-**2026-09-04 — v1.4.0: optimizare cerută de Cristi ("calitate slabă,
-viteză mică, crash-uri, opțiuni lipsă") + instalator Windows.** Cerere
-venită cu SDK-ul oficial Blackmagic (`CodecPlugin.zip`, exemplul
-`x264_encoder_plugin`) și link-urile VideoLAN x264/x265 ca referință
-explicită. Comparat codul nostru cu exemplul oficial — găsite cauze
-concrete, nu presupuneri:
-- `m_pCtx->gop_size` era hardcodat la 12 cadre (fix la orice frame
-  rate) — acum calculat din `HostCodecConfigCommon::GetFrameRateNum/
-  Den()` (deja disponibil, doar nefolosit pentru asta), cu 2 secunde
-  implicit, expus ca slider `gdc_keyframe_interval`.
-- `color_primaries`/`color_trc`/`colorspace` nu erau setate NICIODATĂ pe
-  `AVCodecContext` (doar `color_range`) — acum setate explicit (BT.709
-  implicit, BT.2020 pentru variantele 10-bit sau dacă `clrPrimaries`
-  citit de la host indică asta). Adăugat `IPropertyProvider::GetINT16`
-  (`wrapper/host_api.h`/`.cpp`) — nu exista, doar GetINT32/UINT8/INT64/
-  Double/String — mecanic, oglindă exactă a `GetINT32`. **Notă onestă**:
-  maparea `clrPrimaries` → `AVColorPrimaries` presupune convenția
-  standard ISO/IEC 23001-8 (CICP) — NU confirmată direct cu un export
-  real din Resolve, doar cea mai probabilă interpretare dat fiind
-  numele proprietății; `color_trc`/`colorspace` sunt derivate dintr-o
-  mapare mică, explicită (NU o reinterpretare brută a aceleiași valori
-  ca trei enum-uri diferite — greșeală pe care am scris-o inițial și am
-  corectat-o înainte de commit, verificată cu grep, nu presupunere).
-- Profilul „high422", oferit în UI pentru variantele H.264 8-bit, nu
-  corespundea NICIUNUI `EncoderVariant` real (toate sunt 4:2:0/NV12) —
-  candidat plauzibil pentru eșecuri de `avcodec_open2` raportate ca
-  "nu se încarcă stabil". Eliminat din listă (în ambele locuri:
-  `s_GetEncoderSettings` ȘI `OpenCodec` — verificat cu grep că nu mai
-  rămâne nicio referință).
-- Adăugat: control **Level** (`gdc_level`, dropdown Auto + 3.0-5.2),
-  **thread_count explicit** (`std::thread::hardware_concurrency()`,
-  plafonat la 32), și câmp de **„Parametri avansați"**
-  (`gdc_advanced_params`, trimis ca `x264-params`/`x265-params` prin
-  `av_dict_set` — exact modelul MainConcept de acces expert, fără să
-  cablăm un slider nou pentru fiecare opțiune x264/x265 posibilă).
-- **2-pass (multi-pass) ABR — identificat ca feature real lipsă, prezent
-  chiar în exemplul oficial Blackmagic** (`x264_num_passes`,
-  `x264_param_apply_fastfirstpass`) — infrastructura de host EXISTĂ deja
-  în wrapper-ul nostru, neconectată (`IsNeedNextPass()` în
-  `wrapper/plugin_api.h`, `pIOPropMultiPass` în `IOPluginProps.h`).
-  **NEIMPLEMENTAT în acest pas, explicit** — cea mai mare bucată de cod
-  nouă din tot planul, amânată deliberat la o sesiune viitoare, ca restul
-  fix-urilor (mai mici, mai sigure) să nu aștepte după ea. Nu ascuns —
-  rămâne TODO documentat aici.
-- **Instalator Windows nou** (`install.ps1` + `install.bat`, rădăcina
-  repo-ului) — nu exista NIMIC înainte (userul copia manual folderul
-  bundle). Oglindă funcțională a `install.sh` (Mac, deja corect):
-  găsește bundle-ul, verifică structura, copiază în
-  `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\`,
-  cu re-lansare automată elevată (`Start-Process -Verb RunAs`) dacă
-  scrierea eșuează din lipsă de drepturi — Standard GDC de fallback
-  privilegiat, nu doar raportare de eroare. `install.bat` mic adăugat
-  ca wrapper dublu-clic (userul obișnuit nu vrea să facă click-dreapta →
-  "Run with PowerShell" pe un `.ps1`). `.github/workflows/build.yml`
-  actualizat să includă ambele fișiere în
-  `gdc-resolve-encoder-windows-x64.zip`, lângă bundle+PDF-uri deja
-  incluse (Mac avea deja `install.sh` inclus în zip-ul lui, neschimbat).
-- Verificat: `cmake --build` complet, curat (0 erori/avertismente) pe
-  Mac direct. Windows/Linux verificate prin CI (`.github/workflows/
-  build.yml`, rulează automat la push) — **NU verificat prin export
-  real în DaVinci Resolve** (nu am acces la Resolve din acest mediu);
-  comportamentul real (calitate vizuală, viteză, `install.ps1` rulat
-  efectiv pe un Windows real, inclusiv fallback-ul de elevare) rămâne de
-  confirmat de Cristi.
-- Versiune: acest plugin nu ține un număr de versiune în cod (distribuit
-  prin tag-uri GitHub Release, vezi nota arhitecturală de mai jos) —
-  următorul tag e `v1.4.0` (MINOR — opțiuni noi vizibile: Level,
-  Keyframe Interval, Parametri avansați, instalator Windows).
+**2026-09-04 - v1.4.0: optimizare cerută de Cristi ("calitate slabă, viteză mică, crash-uri, opțiuni lipsă") + instalator Windows.** Cerere venită cu SDK-ul oficial Blackmagic (`CodecPlugin.zip`, exemplul `x264_encoder_plugin`) și link-urile VideoLAN x264/x265 ca referință explicită. Comparat codul nostru cu exemplul oficial, găsite cauze concrete, nu presupuneri:
+- `m_pCtx->gop_size` era hardcodat la 12 cadre (fix la orice frame rate), acum calculat din `HostCodecConfigCommon::GetFrameRateNum/Den()` (deja disponibil, doar nefolosit pentru asta), cu 2 secunde implicit, expus ca slider `gdc_keyframe_interval`.
+- `color_primaries`/`color_trc`/`colorspace` nu erau setate NICIODATĂ pe `AVCodecContext` (doar `color_range`), acum setate explicit (BT.709 implicit, BT.2020 pentru variantele 10-bit sau dacă `clrPrimaries` citit de la host indică asta). Adăugat `IPropertyProvider::GetINT16` (`wrapper/host_api.h`/`.cpp`), nu exista, doar GetINT32/UINT8/INT64/Double/String, mecanic, oglindă exactă a `GetINT32`. **Notă onestă**: maparea `clrPrimaries` → `AVColorPrimaries` presupune convenția standard ISO/IEC 23001-8 (CICP), NU confirmată direct cu un export real din Resolve, doar cea mai probabilă interpretare dat fiind numele proprietății; `color_trc`/`colorspace` sunt derivate dintr-o mapare mică, explicită (NU o reinterpretare brută a aceleiași valori ca trei enum-uri diferite, greșeală pe care am scris-o inițial și am corectat-o înainte de commit, verificată cu grep, nu presupunere).
+- Profilul "high422", oferit în UI pentru variantele H.264 8-bit, nu corespundea NICIUNUI `EncoderVariant` real (toate sunt 4:2:0/NV12), candidat plauzibil pentru eșecuri de `avcodec_open2` raportate ca "nu se încarcă stabil". Eliminat din listă (în ambele locuri: `s_GetEncoderSettings` ȘI `OpenCodec`, verificat cu grep că nu mai rămâne nicio referință).
+- Adăugat: control **Level** (`gdc_level`, dropdown Auto + 3.0-5.2), **thread_count explicit** (`std::thread::hardware_concurrency()`, plafonat la 32), și câmp de **"Parametri avansați"** (`gdc_advanced_params`, trimis ca `x264-params`/`x265-params` prin `av_dict_set`, exact modelul MainConcept de acces expert, fără să cablăm un slider nou pentru fiecare opțiune x264/x265 posibilă).
+- **2-pass (multi-pass) ABR, identificat ca feature real lipsă, prezent chiar în exemplul oficial Blackmagic** (`x264_num_passes`, `x264_param_apply_fastfirstpass`), infrastructura de host EXISTĂ deja în wrapper-ul nostru, neconectată (`IsNeedNextPass()` în `wrapper/plugin_api.h`, `pIOPropMultiPass` în `IOPluginProps.h`). **NEIMPLEMENTAT în acest pas, explicit**, cea mai mare bucată de cod nouă din tot planul, amânată deliberat la o sesiune viitoare, ca restul fix-urilor (mai mici, mai sigure) să nu aștepte după ea. Nu ascuns, rămâne TODO documentat aici.
+- **Instalator Windows nou** (`install.ps1` + `install.bat`, rădăcina repo-ului), nu exista NIMIC înainte (userul copia manual folderul bundle). Oglindă funcțională a `install.sh` (Mac, deja corect): găsește bundle-ul, verifică structura, copiază în `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\`, cu re-lansare automată elevată (`Start-Process -Verb RunAs`) dacă scrierea eșuează din lipsă de drepturi, Standard GDC de fallback privileged, nu doar raportare de eroare. `install.bat` mic adăugat ca wrapper dublu-clic (userul obișnuit nu vrea să facă click-dreapta → "Run with PowerShell" pe un `.ps1`). `.github/workflows/build.yml` actualizat să includă ambele fișiere în `gdc-resolve-encoder-windows-x64.zip`, lângă bundle+PDF-uri deja incluse (Mac avea deja `install.sh` inclus în zip-ul lui, neschimbat).
+- Verificat: `cmake --build` complet, curat (0 erori/avertismente) pe Mac direct. Windows/Linux verificate prin CI (`.github/workflows/build.yml`, rulează automat la push), **NU verificat prin export real în DaVinci Resolve** (nu am acces la Resolve din acest mediu); comportamentul real (calitate vizuală, viteză, `install.ps1` rulat efectiv pe un Windows real, inclusiv fallback-ul de elevare) rămâne de confirmat de Cristi.
+- Versiune: acest plugin nu ține un număr de versiune în cod (distribuit prin tag-uri GitHub Release, vezi nota arhitecturală de mai jos), următorul tag e `v1.4.0` (MINOR, opțiuni noi vizibile: Level, Keyframe Interval, Parametri avansați, instalator Windows).
 
 ## NOTĂ ARHITECTURALĂ: Directiva Supremă de release NU se aplică 1:1 aici
-Acesta e un plugin DaVinci Resolve (OFX), NU o aplicație standalone cu
-propriul site/UI/meniu — nu are fereastră About, nu are meniu propriu de
-verificare-actualizări, și nu se distribuie printr-un site propriu. E
-livrat ca produs în catalogul GDC Plugin Manager (vezi
-`gdc-plugin-manager/docs/catalog.json`) — versiunea, verificarea de
-actualizări și pachetul de instalare sunt responsabilitatea Manager-ului
-care îl instalează, nu ale acestui repo direct. Licențierea (Ed25519,
-Machine ID) rămâne totuși sincronizată cu `LicenseCore.swift`/`.cs`/`.py` —
-vezi `gdc-plugin-manager/CLAUDE.md`.
+Acesta e un plugin DaVinci Resolve (OFX), NU o aplicație standalone cu propriul site/UI/meniu, nu are fereastră About, nu are meniu propriu de verificare-actualizări, și nu se distribuie printr-un site propriu. E livrat ca produs în catalogul GDC Plugin Manager (vezi `gdc-plugin-manager/docs/catalog.json`), versiunea, verificarea de actualizări și pachetul de instalare sunt responsabilitatea Manager-ului care îl instalează, nu ale acestui repo direct. Licențierea (Ed25519, Machine ID) rămâne totuși sincronizată cu `LicenseCore.swift`/`.cs`/`.py`, vezi `gdc-plugin-manager/CLAUDE.md`.
 
-**2026-09-04 — Linux scos din lansări, începând cu v1.5.0.** Cerut explicit
-de Cristi ("începand cu urmatoarea actualizare scoatem varianta de
-Linux"). Făcut: jobul `build-linux` eliminat COMPLET din
-`.github/workflows/build.yml` (nu doar dezactivat — cod mort), `needs:`/
-lista de fișiere a jobului `release` actualizate să nu mai aștepte/atașeze
-asset-ul Linux, `README.md`/`.en.md`/`.es.md` curățate de toate mențiunile
-Linux (tabele de codecuri, secțiune de instalare, cerințe, diagrama
-bundle-ului, comanda de build din sursă) — verificat cu `grep -i linux`,
-zero rezultate rămase în toate cele 3 README-uri. **NEFĂCUT încă, TODO
-explicit**: `docs/index.html` (pagina de prezentare, `gordas.dev`-style)
-încă are un tab întreg „Linux" în secțiunea de instalare, un buton de
-download către `gdc-resolve-encoder-linux-x64.zip` (care va da 404 la
-prima lansare fără acel asset), rânduri de tabel și texte i18n (RO/EN/ES)
-menționând Linux — pagină HTML/JS de o singură bucată, nu am citit-o
-integral și nu am editat-o acum ca să nu risc s-o stric fără verificare
-vizuală reală. De făcut la următoarea atingere a acestui repo, înainte de
-`v1.5.0`.
+**2026-09-04 - Linux scos din lansări, începând cu v1.5.0.** Cerut explicit de Cristi ("începand cu urmatoarea actualizare scoatem varianta de Linux"). Făcut: jobul `build-linux` eliminat COMPLET din `.github/workflows/build.yml` (nu doar dezactivat, cod mort), `needs:`/lista de fișiere a jobului `release` actualizate să nu mai aștepte/atașeze asset-ul Linux, `README.md`/`.en.md`/`.es.md` curățate de toate mențiunile Linux (tabele de codecuri, secțiune de instalare, cerințe, diagrama bundle-ului, comanda de build din sursă), verificat cu `grep -i linux`, zero rezultate rămase în toate cele 3 README-uri. **NEFĂCUT încă, TODO explicit**: `docs/index.html` (pagina de prezentare, `gordas.dev`-style) încă are un tab întreg "Linux" în secțiunea de instalare, un buton de download către `gdc-resolve-encoder-linux-x64.zip` (care va da 404 la prima lansare fără acel asset), rânduri de tabel și texte i18n (RO/EN/ES) menționând Linux, pagină HTML/JS de o singură bucată, nu am citit-o integral și nu am editat-o acum ca să nu risc s-o stric fără verificare vizuală reală. De făcut la următoarea atingere a acestui repo, înainte de `v1.5.0`.
 
-**2026-09-04 — v1.4.1: BUG STRUCTURAL REAL găsit la testare — FFmpeg
-SONAME mismatch — + instalator .pkg semnat/notarizat.** Cristi a instalat
-v1.4.0 (Mac) și pluginul nu apărea deloc în lista de codecuri din
-Resolve, deși bundle-ul era prezent corect în folderul IOPlugins. Diagnoză
-directă pe mașina lui (`otool -L`, `xattr`, `codesign -dv`, versiune chip,
-FFmpeg instalat): pluginul PUBLICAT (construit de CI, `macos-14` runner,
-`brew install ffmpeg` proaspăt la fiecare build) cerea
-`libavcodec.62.dylib`/`libavutil.60.dylib`/`libswscale.9.dylib`, dar
-FFmpeg-ul de pe mașina lui (Homebrew, la zi) avea DOAR
-`.63`/`.61`/`.10` — SONAME-uri diferite, deci `dlopen` eșuează SILENȚIOS
-la încărcarea plugin-ului de către Resolve (fără nicio eroare vizibilă în
-UI). **Cauză structurală, nu doar o instalare veche**: pluginul se leagă
-DINAMIC la calea absolută Homebrew a FFmpeg-ului de PE MAȘINA DE
-COMPILARE — orice discrepanță de versiune între mașina CI/build și mașina
-utilizatorului (extrem de probabilă, Homebrew updatează ffmpeg des) rupe
-încărcarea, silențios, fără avertisment. Foarte plauzibil să fi fost un
-contributor real la "crash-uri / nu se încarcă stabil" din cererea
-inițială a lui Cristi — mai degrabă decât (sau pe lângă) profilul
-"high422" reparat în v1.4.0.
+**2026-09-04 - v1.4.1: BUG STRUCTURAL REAL găsit la testare - FFmpeg SONAME mismatch - + instalator .pkg semnat/notarizat.** Cristi a instalat v1.4.0 (Mac) și pluginul nu apărea deloc în lista de codecuri din Resolve, deși bundle-ul era prezent corect în folderul IOPlugins. Diagnoză directă pe mașina lui (`otool -L`, `xattr`, `codesign -dv`, versiune chip, FFmpeg instalat): pluginul PUBLICAT (construit de CI, `macos-14` runner, `brew install ffmpeg` proaspăt la fiecare build) cerea `libavcodec.62.dylib`/`libavutil.60.dylib`/`libswscale.9.dylib`, dar FFmpeg-ul de pe mașina lui (Homebrew, la zi) avea DOAR `.63`/`.61`/`.10`, SONAME-uri diferite, deci `dlopen` eșuează SILENȚIOS la încărcarea plugin-ului de către Resolve (fără nicio eroare vizibilă în UI). **Cauză structurală, nu doar o instalare veche**: pluginul se leagă DINAMIC la calea absolută Homebrew a FFmpeg-ului de PE MAȘINA DE COMPILARE, orice discrepanță de versiune între mașina CI/build și mașina utilizatorului (extrem de probabilă, Homebrew updatează ffmpeg des) rupe încărcarea, silențios, fără avertisment. Foarte plauzibil să fi fost un contributor real la "crash-uri / nu se încarcă stabil" din cererea inițială a lui Cristi, mai degrabă decât (sau pe lângă) profilul "high422" reparat în v1.4.0.
 
-**NEREZOLVAT DEFINITIV — TODO real, explicit, pentru sesiunea următoare**:
-soluția corectă e fie (a) legarea FFmpeg static la compilare (elimină
-complet dependența de runtime), fie (b) bundling-ul dylib-urilor FFmpeg +
-TOATE dependințele lor tranzitive (x264, x265, etc.) direct în bundle,
-cu `install_name_tool`/`@loader_path` rescriere de căi — exact ce face
-deja Windows (DLL-urile FFmpeg sunt incluse direct în arhivă, vezi
-`.github/workflows/build.yml`). Un instrument ca `dylibbundler` ar face
-asta corect și complet (recursiv); NU încercat acum — bundling manual,
-incomplet, ar fi mutat problema un nivel mai jos (dependințele
-TRANZITIVE ale libavcodec însuși) fără s-o rezolve cu-adevărat.
+**NEREZOLVAT DEFINITIV - TODO real, explicit, pentru sesiunea următoare**: soluția corectă e fie (a) legarea FFmpeg static la compilare (elimină complet dependența de runtime), fie (b) bundling-ul dylib-urilor FFmpeg + TOATE dependințele lor tranzitive (x264, x265, etc.) direct în bundle, cu `install_name_tool`/`@loader_path` rescriere de căi, exact ce face deja Windows (DLL-urile FFmpeg sunt incluse direct în arhivă, vezi `.github/workflows/build.yml`). Un instrument ca `dylibbundler` ar face asta corect și complet (recursiv); NU încercat acum, bundling manual, incomplet, ar fi mutat problema un nivel mai jos (dependințele TRANZITIVE ale libavcodec însuși) fără s-o rezolve cu-adevărat.
 
-**Fix practic, imediat, aplicat**: `build_installer.sh` (NOU) — compilează
-plugin-ul LOCAL, pe mașina curentă (deci garantat potrivit cu FFmpeg-ul
-ei), îl semnează cu `APPLE_SIGN_IDENTITY_APP` (cert deja existent în
-`~/Developer/Certificates/`, `entitlements.plist` copiat neschimbat din
-`codesigning/` — `com.apple.security.cs.disable-library-validation` e
-critic aici, altfel Hardened Runtime ar respinge dylib-urile Homebrew
-nesemnate de noi), îl împachetează într-un `.pkg` (`pkgbuild` +
-`productbuild`, payload direct la
-`/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/`,
-`installer/scripts/preinstall` curăță o instalare veche, `installer/
-License.txt` nou — Regula 19, pas de licență Agree/Disagree obligatoriu),
-apoi semnează+notarizează+staplează pachetul final
-(`codesigning/sign-and-notarize.sh pkg`, folder copiat NESCHIMBAT din
-`GDCVault`). **Testat efectiv, cu succes complet**: `spctl -a -vv -t
-install` → `accepted, source=Notarized Developer ID`; notarizare Apple
-reușită (`status: Accepted`); `pkgutil --payload-files` confirmă
-destinația corectă. Trimis lui Cristi ca fișier, de instalat prin
-dublu-clic — cerut explicit ("vreau instalare tip pkg", "sa nu rulez eu
-in terminal"). `install.sh` (Terminal) rămâne disponibil ca alternativă
-manuală, dar `.pkg`-ul e acum calea principală recomandată pe Mac.
-Versiune 1.4.0 → 1.4.1 (PATCH — fix real de încărcare + instalator nou,
-nicio schimbare de funcționalitate de encodare).
+**Fix practic, imediat, aplicat**: `build_installer.sh` (NOU), compilează plugin-ul LOCAL, pe mașina curentă (deci garantat potrivit cu FFmpeg-ul ei), îl semnează cu `APPLE_SIGN_IDENTITY_APP` (cert deja existent în `~/Developer/Certificates/`, `entitlements.plist` copiat neschimbat din `codesigning/`, `com.apple.security.cs.disable-library-validation` e critic aici, altfel Hardened Runtime ar respinge dylib-urile Homebrew nesemnate de noi), îl împachetează într-un `.pkg` (`pkgbuild` + `productbuild`, payload direct la `/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/`, `installer/scripts/preinstall` curăță o instalare veche, `installer/License.txt` nou, Regula 19, pas de licență Agree/Disagree obligatoriu), apoi semnează+notarizează+staplează pachetul final (`codesigning/sign-and-notarize.sh pkg`, folder copiat NESCHIMBAT din `GDCVault`). **Testat efectiv, cu succes complet**: `spctl -a -vv -t install` → `accepted, source=Notarized Developer ID`; notarizare Apple reușită (`status: Accepted`); `pkgutil --payload-files` confirmă destinația corectă. Trimis lui Cristi ca fișier, de instalat prin dublu-clic, cerut explicit ("vreau instalare tip pkg", "sa nu rulez eu in terminal"). `install.sh` (Terminal) rămâne disponibil ca alternativă manuală, dar `.pkg`-ul e acum calea principală recomandată pe Mac. Versiune 1.4.0 → 1.4.1 (PATCH, fix real de încărcare + instalator nou, nicio schimbare de funcționalitate de encodare).
 
-**2026-09-05 — v1.4.2: TODO-ul „NEREZOLVAT DEFINITIV" de mai sus, rezolvat
-efectiv — bundling FFmpeg + toate dependințele tranzitive, cu
-`dylibbundler`.** Opțiunea (b) din nota de mai sus, aleasă (statică ar fi
-însemnat recompilarea FFmpeg din surse, mult mai fragil de întreținut).
-- **`bundle_ffmpeg_mac.sh`** (NOU, rădăcina repo-ului) — o singură sursă de
-  adevăr, apelată identic din `build_installer.sh` (local, `.pkg`
-  notarizat) ȘI din `.github/workflows/build.yml` (CI, zip) — Regula 30,
-  zero cod duplicat care poate diverge. Rulează `dylibbundler -ns -cd -b`
-  pe binarul `.dvcp` cu `-p @loader_path/../Frameworks/`, copiind
-  `libavcodec`/`libavutil`/`libswscale`/`libswresample` ȘI toate
-  dependințele lor tranzitive reale (verificate la rulare pe acest Mac:
-  `libx264`, `libx265`, `libvpx`, `libdav1d`, `libSvtAv1Enc`, `libopus`,
-  `libmp3lame`, `libmpg123`, `liblzma`, `libssl`, `libcrypto` — 15
-  biblioteci în total) direct în `Contents/Frameworks/` al bundle-ului.
-  `-ns` dezactivează semnarea ad-hoc automată a lui `dylibbundler` — script-ul
-  semnează el însuși fiecare dylib, cu `APPLE_SIGN_IDENTITY_APP` (Developer
-  ID real, necesar pentru notarizare) dacă e setat în mediu, altfel ad-hoc
-  (fluxul CI/zip nesemnat, neschimbat). Verificare automată inclusă în
-  script: `otool -L` pe binar ȘI pe fiecare dylib copiat, eșuează exit 1
-  dacă mai rămâne vreo cale absolută `/opt/homebrew`/`/usr/local/opt`.
-- **`build_installer.sh`** — reordonat: bundling-ul FFmpeg rulează ACUM
-  între copierea binarului brut în bundle și semnarea finală a binarului
-  principal (`dylibbundler` rescrie load commands, ceea ce invalidează
-  orice semnătură anterioară — semnarea trebuie să vină ultima).
-- **CI (`build.yml`, jobul `build-macos`)** — adăugat `brew install
-  dylibbundler` lângă `cmake`/`pkg-config`/`ffmpeg` deja existente, plus
-  apelul la `bundle_ffmpeg_mac.sh` + o semnare ad-hoc a binarului principal
-  (înainte nesemnat complet) imediat după compilare, înainte de zip. Zip-ul
-  de pe GitHub Releases e acum la fel de self-contained ca `.pkg`-ul local.
-- **`install.sh`** — eliminat complet pasul de verificare/instalare
-  Homebrew+FFmpeg (nu mai e nevoie de el structural).
-- **`README.md`/`.en.md`/`.es.md`** — actualizate să reflecte că FFmpeg nu
-  mai trebuie instalat separat pe Mac (secțiunea "Despre FFmpeg", pașii de
-  instalare, lista de Cerințe). Secțiunea de compilare din surse
-  (`brew install cmake pkg-config ffmpeg`) rămâne neschimbată — e nevoie de
-  headers FFmpeg la COMPILARE, distinct de dependința de RUNTIME eliminată
-  aici.
-- **`docs/index.html`** (RO/EN/ES, i18n) — rândul din secțiunea Cerințe
-  care cerea `brew install ffmpeg` pe Mac, înlocuit cu confirmarea că nu
-  mai e nevoie de nimic în plus.
-- **NEFĂCUT, TODO explicit**: cele 3 ghiduri PDF trilingve
-  (`docs/guides/GDC_Resolve_Encoder_Ghid_RO.pdf` etc.) probabil mai
-  menționează pasul Homebrew/FFmpeg (Regula 8(b)) — sunt fișiere binare
-  statice, fără script generator în acest repo, NEVERIFICATE și
-  NEACTUALIZATE acum. De revizuit/regenerat la următoarea atingere a
-  documentației acestui repo.
-- **Verificat real, nu presupus**: `cmake --build` curat (0 erori) pe
-  această mașină; `./bundle_ffmpeg_mac.sh` rulat direct pe binarul
-  compilat local — output confirmă 15 dylib-uri copiate, verificarea
-  internă `otool -L` a trecut (zero căi Homebrew rămase). Test funcțional
-  real de încărcare: `ctypes.CDLL(...)` (Python, echivalent cu `dlopen`
-  folosit de Resolve) a reușit ÎNAINTE și DUPĂ semnarea binarului
-  principal; `DYLD_PRINT_LIBRARIES=1` confirmă că TOATE cele 15
-  dependințe se încarcă din `Contents/Frameworks/` al bundle-ului, ZERO
-  referințe la `/opt/homebrew` — dovadă directă că bug-ul de SONAME
-  mismatch (v1.4.1) nu se mai poate reproduce, indiferent ce versiune de
-  FFmpeg are utilizatorul final instalată (sau dacă nu are Homebrew
-  deloc). **CONFIRMAT de Cristi (2026-09-05)**: `.pkg` de test
-  (`GDCResolveEncoder-1.4.2.pkg`, nesemnat — cert Developer ID Installer
-  lipsă din Keychain, instalat manual cu `sudo installer -pkg ... -target
-  /`) — codecul GDC apare corect în lista din Resolve. Bug-ul de SONAME
-  mismatch confirmat rezolvat definitiv, nu doar teoretic.
-- Versiune 1.4.1 → 1.4.2 (PATCH — fix structural de încărcare, nicio
-  schimbare de funcționalitate de encodare vizibilă). Tag-ul `v1.4.2` nu a
-  fost creat/împins încă — rămâne un pas separat, de făcut când Cristi
-  confirmă că vrea să publice.
+**2026-09-05 - v1.4.2: TODO-ul "NEREZOLVAT DEFINITIV" de mai sus, rezolvat efectiv - bundling FFmpeg + toate dependințele tranzitive, cu `dylibbundler`.** Opțiunea (b) din nota de mai sus, aleasă (statică ar fi însemnat recompilarea FFmpeg din surse, mult mai fragil de întreținut).
+- **`bundle_ffmpeg_mac.sh`** (NOU, rădăcina repo-ului), o singură sursă de adevăr, apelată identic din `build_installer.sh` (local, `.pkg` notarizat) ȘI din `.github/workflows/build.yml` (CI, zip), Regula 30, zero cod duplicat care poate diverge. Rulează `dylibbundler -ns -cd -b` pe binarul `.dvcp` cu `-p @loader_path/../Frameworks/`, copiind `libavcodec`/`libavutil`/`libswscale`/`libswresample` ȘI toate dependințele lor tranzitive reale (verificate la rulare pe acest Mac: `libx264`, `libx265`, `libvpx`, `libdav1d`, `libSvtAv1Enc`, `libopus`, `libmp3lame`, `libmpg123`, `liblzma`, `libssl`, `libcrypto`, 15 biblioteci în total) direct în `Contents/Frameworks/` al bundle-ului. `-ns` dezactivează semnarea ad-hoc automată a lui `dylibbundler`, script-ul semnează el însuși fiecare dylib, cu `APPLE_SIGN_IDENTITY_APP` (Developer ID real, necesar pentru notarizare) dacă e setat în mediu, altfel ad-hoc (fluxul CI/zip nesemnat, neschimbat). Verificare automată inclusă în script: `otool -L` pe binar ȘI pe fiecare dylib copiat, eșuează exit 1 dacă mai rămâne vreo cale absolută `/opt/homebrew`/`/usr/local/opt`.
+- **`build_installer.sh`**, reordonat: bundling-ul FFmpeg rulează ACUM între copierea binarului brut în bundle și semnarea finală a binarului principal (`dylibbundler` rescrie load commands, ceea ce invalidează orice semnătură anterioară, semnarea trebuie să vină ultima).
+- **CI (`build.yml`, jobul `build-macos`)**, adăugat `brew install dylibbundler` lângă `cmake`/`pkg-config`/`ffmpeg` deja existente, plus apelul la `bundle_ffmpeg_mac.sh` + o semnare ad-hoc a binarului principal (înainte nesemnat complet) imediat după compilare, înainte de zip. Zip-ul de pe GitHub Releases e acum la fel de self-contained ca `.pkg`-ul local.
+- **`install.sh`**, eliminat complet pasul de verificare/instalare Homebrew+FFmpeg (nu mai e nevoie de el structural).
+- **`README.md`/`.en.md`/`.es.md`**, actualizate să reflecte că FFmpeg nu mai trebuie instalat separat pe Mac (secțiunea "Despre FFmpeg", pașii de instalare, lista de Cerințe). Secțiunea de compilare din surse (`brew install cmake pkg-config ffmpeg`) rămâne neschimbată, e nevoie de headers FFmpeg la COMPILARE, distinct de dependința de RUNTIME eliminată aici.
+- **`docs/index.html`** (RO/EN/ES, i18n), rândul din secțiunea Cerințe care cerea `brew install ffmpeg` pe Mac, înlocuit cu confirmarea că nu mai e nevoie de nimic în plus.
+- **NEFĂCUT, TODO explicit**: cele 3 ghiduri PDF trilingve (`docs/guides/GDC_Resolve_Encoder_Ghid_RO.pdf` etc.) probabil mai menționează pasul Homebrew/FFmpeg (Regula 8(b)), sunt fișiere binare statice, fără script generator în acest repo, NEVERIFICATE și NEACTUALIZATE acum. De revizuit/regenerat la următoarea atingere a documentației acestui repo.
+- **Verificat real, nu presupus**: `cmake --build` curat (0 erori) pe această mașină; `./bundle_ffmpeg_mac.sh` rulat direct pe binarul compilat local, output confirmă 15 dylib-uri copiate, verificarea internă `otool -L` a trecut (zero căi Homebrew rămase). Test funcțional real de încărcare: `ctypes.CDLL(...)` (Python, echivalent cu `dlopen` folosit de Resolve) a reușit ÎNAINTE și DUPĂ semnarea binarului principal; `DYLD_PRINT_LIBRARIES=1` confirmă că TOATE cele 15 dependințe se încarcă din `Contents/Frameworks/` al bundle-ului, ZERO referințe la `/opt/homebrew`, dovadă directă că bug-ul de SONAME mismatch (v1.4.1) nu se mai poate reproduce, indiferent ce versiune de FFmpeg are utilizatorul final instalată (sau dacă nu are Homebrew deloc). **CONFIRMAT de Cristi (2026-09-05)**: `.pkg` de test (`GDCResolveEncoder-1.4.2.pkg`, nesemnat, cert Developer ID Installer lipsă din Keychain, instalat manual cu `sudo installer -pkg ... -target /`), codecul GDC apare corect în lista din Resolve. Bug-ul de SONAME mismatch confirmat rezolvat definitiv, nu doar teoretic.
+- Versiune 1.4.1 → 1.4.2 (PATCH, fix structural de încărcare, nicio schimbare de funcționalitate de encodare vizibilă). Tag-ul `v1.4.2` nu a fost creat/împins încă, rămâne un pas separat, de făcut când Cristi confirmă că vrea să publice.
 
-**2026-09-05 — 2-Pass (multi-pass) ABR încercat, EȘUAT REAL la testare, REVERTIT
-complet (commit `400675d`, revert al `a4bdb73`).** TODO-ul cel mai mare rămas
-din planul v1.4.0 — implementat, verificat cu un test standalone real
-FFmpeg (nu doar presupus), livrat ca `.pkg` de test lui Cristi. **A eșuat
-real în DaVinci Resolve**, confirmat direct din `davinci_resolve.log`
-(bundle-ul de log-uri trimis de Cristi, `DaVinci-Resolve-logs-20260905-033304.zip`):
+**2026-09-05 - 2-Pass (multi-pass) ABR încercat, EȘUAT REAL la testare, REVERTIT complet (commit `400675d`, revert al `a4bdb73`).** TODO-ul cel mai mare rămas din planul v1.4.0, implementat, verificat cu un test standalone real FFmpeg (nu doar presupus), livrat ca `.pkg` de test lui Cristi. **A eșuat real în DaVinci Resolve**, confirmat direct din `davinci_resolve.log` (bundle-ul de log-uri trimis de Cristi, `DaVinci-Resolve-logs-20260905-033304.zip`):
 
-```
 Plugin Info :: GDC Encoder :: DoFlush complete — 349 frames sent, 349 packets...
 Plugin Error :: GDC Encoder :: avcodec_send_frame failed at frame 349: End of file
 Failed to Encode Frame, codec ...:9A1C3E026B774F108E210C4F2A917D01
 Task ERROR :: Error occured during recording of /Volumes/GDC/facebook/t1.mov : Failed to encode the video frame.
 ... (repetat, cascadă de "Unknown error")
 GsManager :: Recording cancelled after 20 frames.
-```
 
-- **Root cause identificat din log, nu presupus**: după ce pass 1 se
-  termină (`DoFlush()` trimite EOF către `avcodec_send_frame`, drenează
-  tot, `m_EofSentToEncoder=true` permanent pe acel `AVCodecContext`),
-  Resolve NU a apelat niciodată `DoOpen()` a doua oară (niciun log
-  "OpenCodec — pass 2/2" nu apare NICIUNDE în întregul fișier de log,
-  deși pass 1 a rulat de 2 ori, pentru 2 codec-uri diferite testate pe
-  rând). În schimb, Resolve a continuat să trimită cadre REALE direct la
-  `DoProcess()` pe ACEEAȘI instanță/`AVCodecContext` deja aflat la EOF —
-  eșuat instant, randare anulată de Resolve după 20 de cadre.
-- **Concluzie**: presupunerea din plan ("hostul reapelează `DoOpen()` pe
-  aceeași instanță după `IsNeedNextPass()==true`", bazată strict pe
-  structura `wrapper/plugin_api.h`, oglindă a SDK-ului oficial) e
-  GREȘITĂ pentru comportamentul REAL al acestei versiuni de DaVinci
-  Resolve (v21.0.4.0005) — fie `msgCodecNeedNextPass` nu e apelat deloc,
-  fie contractul real e diferit (posibil: Resolve se așteaptă ca
-  `DoFlush()` să NU trimită un EOF definitiv către encoder cât timp mai
-  urmează o trecere, ci doar să dreneze pachetele PENDING, lăsând
-  `AVCodecContext`-ul deschis pentru cadre noi pe aceeași instanță) — nu
-  confirmat care variantă e cea corectă, doar că arhitectura implementată
-  acum e greșită.
-- **Acțiune luată, imediat, fără să aștept o sesiune viitoare**: REVERT
-  complet (`git revert a4bdb73`, commit `400675d`) — checkbox-ul
-  „2-Pass Encoding" dispare din UI, plugin-ul revine exact la
-  comportamentul v1.4.2 (deja confirmat funcțional real de Cristi).
-  Niciun tag `v1.5.0` fusese creat/împins — nimic de retras public.
-  Mecanismul de bază FFmpeg (fișier `passlogfile`/`x265-stats`,
-  confirmat funcțional printr-un test standalone real, în afara
-  plugin-ului) rămâne valid pentru o încercare viitoare — problema e
-  EXCLUSIV la nivelul orchestrării `IsNeedNextPass()`/`DoOpen()` din
-  interiorul acestui plugin, nu la nivelul FFmpeg.
-- **TODO real, pentru o sesiune viitoare, dacă se reia**: găsit/confirmat
-  contractul REAL al Resolve pentru multi-pass (documentație oficială
-  Blackmagic, dacă există, sau un exemplu funcțional din SDK — cel din
-  `x264_encoder_plugin` menționat în cererea inițială a lui Cristi merită
-  verificat explicit pentru ACEST detaliu specific, nu doar pentru
-  parametrii de encodare copiați deja la v1.4.0), ideal cu un ciclu de
-  testare mai rapid (clip foarte scurt) înainte de a trimite din nou un
-  build de test.
+- **Root cause identificat din log, nu presupus**: după ce pass 1 se termină (`DoFlush()` trimite EOF către `avcodec_send_frame`, drenează tot, `m_EofSentToEncoder=true` permanent pe acel `AVCodecContext`), Resolve NU a apelat niciodată `DoOpen()` a doua oară (niciun log "OpenCodec - pass 2/2" nu apare NICIUNDE în întregul fișier de log, deși pass 1 a rulat de 2 ori, pentru 2 codec-uri diferite testate pe rând). În schimb, Resolve a continuat să trimită cadre REALE direct la `DoProcess()` pe ACEEAȘI instanță/`AVCodecContext` deja aflat la EOF, eșuat instant, randare anulată de Resolve după 20 de cadre.
+- **Concluzie**: presupunerea din plan ("hostul reapelează `DoOpen()` pe aceeași instanță după `IsNeedNextPass()==true`", bazată strict pe structura `wrapper/plugin_api.h`, oglindă a SDK-ului oficial) e GREȘITĂ pentru comportamentul REAL al acestei versiuni de DaVinci Resolve (v21.0.4.0005), fie `msgCodecNeedNextPass` nu e apelat deloc, fie contractul real e diferit (posibil: Resolve se așteaptă ca `DoFlush()` să NU trimită un EOF definitiv către encoder cât timp mai urmează o trecere, ci doar să dreneze pachetele PENDING, lăsând `AVCodecContext`-ul deschis pentru cadre noi pe aceeași instanță), nu confirmat care variantă e cea corectă, doar că arhitectura implementată acum e greșită.
+- **Acțiune luată, imediat, fără să aștept o sesiune viitoare**: REVERT complet (`git revert a4bdb73`, commit `400675d`), checkbox-ul "2-Pass Encoding" dispare din UI, plugin-ul revine exact la comportamentul v1.4.2 (deja confirmat funcțional real de Cristi). Niciun tag `v1.5.0` fusese creat/împins, nimic de retras public. Mecanismul de bază FFmpeg (fișier `passlogfile`/`x265-stats`, confirmat funcțional printr-un test standalone real, în afara plugin-ului) rămâne valid pentru o încercare viitoare, problema e EXCLUSIV la nivelul orchestrării `IsNeedNextPass()`/`DoOpen()` din interiorul acestui plugin, nu la nivelul FFmpeg.
+- **TODO real, pentru o sesiune viitoare, dacă se reia**: găsit/confirmat contractul REAL al Resolve pentru multi-pass (documentație oficială Blackmagic, dacă există, sau un exemplu funcțional din SDK, cel din `x264_encoder_plugin` menționat în cererea inițială a lui Cristi merită verificat explicit pentru ACEST detaliu specific, nu doar pentru parametrii de encodare copiați deja la v1.4.0), ideal cu un ciclu de testare mai rapid (clip foarte scurt) înainte de a trimite din nou un build de test.
 
 ### Completări specifice acestui repo, mutate din fosta Partea 1 (2026-09-18)
 
-Păstrate verbatim. Regula generală la care se referă fiecare e în
-`~/Developer/CLAUDE.md`.
+Păstrate verbatim. Regula generală la care se referă fiecare e în `~/Developer/CLAUDE.md`.
 
 **Regula 20:**
-
-**Status acest repo (2026-08-27): EXCEPTAT arhitectural, nu neimplementat.** E un IOPlugin (`.dylib`/`.dll`) încărcat de DaVinci Resolve — nu are un proces propriu de rulat pe care să-l relanseze, deci Self-Updater-ul (așa cum e definit mai sus) nu se aplică. Rămâne la reinstalare manuală ghidată de ghidul PDF trilingv deja existent (`docs/guides/`) — NU adăuga cod de auto-update aici fără să repui în discuție arhitectura de plugin.
+**Status acest repo (2026-08-27): EXCEPTAT arhitectural, nu neimplementat.** E un IOPlugin (`.dylib`/`.dll`) încărcat de DaVinci Resolve, nu are un proces propriu de rulat pe care să-l relanseze, deci Self-Updater-ul (așa cum e definit mai sus) nu se aplică. Rămâne la reinstalare manuală ghidată de ghidul PDF trilingv deja existent (`docs/guides/`), NU adăuga cod de auto-update aici fără să repui în discuție arhitectura de plugin.
 
 **Regula 21:**
+**Status acest repo (2026-08-28, verificat): EXCEPTAT ARHITECTURAL, motiv DIFERIT de Regula 20.** Auditat la cererea lui Cristi, `ffmpeg_encoder.cpp` encodeaza cadru-cu-cadru prin libavcodec (`av_frame_alloc`/`av_frame_get_buffer`, pachete flush-uite unul cate unul), deja streaming prin design, nu incarca niciodata fisierul/timeline-ul intreg in memorie. Tunabilul de memorie relevant aici e `rc_buffer_size` si celelalte setari de rate-control ale encoder-ului FFmpeg, NU un "buffer de citire in MB" generic ca la copierea de fisiere brute (DataMover), cele doua nu sunt acelasi tip de problema, desi ambele sunt "memorie la fisiere mari".
 
-**Status acest repo (2026-08-28, verificat): EXCEPTAT ARHITECTURAL, motiv DIFERIT de Regula 20.** Auditat la cererea lui Cristi — `ffmpeg_encoder.cpp` encodeaza cadru-cu-cadru prin libavcodec (`av_frame_alloc`/`av_frame_get_buffer`, pachete flush-uite unul cate unul), deja streaming prin design — nu incarca niciodata fisierul/timeline-ul intreg in memorie. Tunabilul de memorie relevant aici e `rc_buffer_size` si celelalte setari de rate-control ale encoder-ului FFmpeg, NU un "buffer de citire in MB" generic ca la copierea de fisiere brute (DataMover) — cele doua nu sunt acelasi tip de problema, desi ambele sunt "memorie la fisiere mari".
+## [PARTEA 3: PROFIL TEHNIC ȘI DIRECTIVE DE TESTARE]
+
+### Rol și profil
+Ești Principal Video Infrastructure Engineer și Director Tehnic de Post-Producție. Te ocupi direct de dezvoltarea proiectului GDC Resolve Encoder (`~/Developer/gdc-resolve-encoder`). Scopul este construirea unui encoder și plugin de export de nivel broadcast și cinematografic pentru DaVinci Resolve Studio.
+
+### Domenii de expertiză
+- DaVinci Resolve IOEncoder SDK, Scripting API și integrarea de containere media custom.
+- Pipeline-uri de culoare: ACES, DaVinci YRGB Color Managed, etichete NCLC, spații de culoare (Rec.709, Rec.2020, P3-D65, ST 2084/PQ, HLG).
+- Encodere hardware și software, FFmpeg (libavformat, libavcodec), Apple ProRes, Avid DNxHR/DNxHD, MXF OP1a.
+- Sincronizare audio multicanal, LPCM 24-bit, pachete SMPTE timecode (LTC/VITC) și metadata de cadru.
+- Programare C/C++, Python, gestionare de memorie și optimizare pe GPU/CPU.
+
+### Acces la mediu și testare
+- Ai acces la sistemul local și la aplicația DaVinci Resolve Studio pentru verificare.
+- Analizează tot codul sursă existent în folderul proiectului GDC Resolve Encoder înainte de a propune modificări.
+- Testează și validează funcționalitatea pluginului direct în DaVinci Resolve la fiecare pas tehnic.
+- Monitorizează alocarea de memorie, stabilitatea procesului de randare și fișierele de log din `davinci_resolve.log`.
+
+### Reguli de dezvoltare
+- Fără aproximări. Structurile de date, antetele și metadatele respectă strict specificațiile SMPTE și EBU.
+- Validare riguroasă a etichetelor de culoare din containerul generat.
+- Cod thread-safe pe toată durata sesiunii de export.
+- Logare detaliată a erorilor pentru integrare în sisteme automate de control al calității (QC).
+**2026-09-21 - v1.4.3 - Audit tehnic: culoare, robustețe cadre, test dlopen în CI (netestat în Resolve; tag-ul v1.4.3 NU e creat; versiunea nu stă în cod, doar în tag + CHANGELOG).** (1) Etichete de culoare din `clrPrimaries`/`clrTransfer`/`clrMtx` (whitelist 709/2020/P3-D65, PQ/HLG), fallback Rec.709, fără inferență din 10-bit; numerotarea CICP a host-ului rămâne NEconfirmată (vezi linia `color tags` din log). (2) `av_frame_make_writable`, refuz pentru dimensiuni impare, `SendPacketToHost` fără `std::vector` (conversie în 2 treceri direct în buffer-ul host). (3) `tests/check_load.py` rulat în CI pe pluginul bundluit (Mac + Windows). **[ÎNCHIS, decizie Cristi]** TODO-ul de curățare Linux din `docs/index.html` NU se mai face: Linux nu mai e țintă, pagina nu se atinge pentru asta.

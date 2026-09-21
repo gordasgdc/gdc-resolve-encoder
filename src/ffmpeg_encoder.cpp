@@ -197,9 +197,9 @@ static std::vector<uint8_t> BuildHevcConfigRecord(const std::vector<std::vector<
 // relying on a specific FFmpeg flag combination behaving a certain way)
 // keeps this correct regardless of encoder/version quirks.
 // ─────────────────────────────────────────────────────────────────────────
-static void ConvertAnnexBToLengthPrefixed(const uint8_t* p_pData, int p_Size, std::vector<uint8_t>& p_Out)
+static size_t ConvertAnnexBToLengthPrefixedRaw(const uint8_t* p_pData, int p_Size, uint8_t* p_pOut)
 {
-    p_Out.clear();
+    size_t outPos = 0;
     int i = 0;
     while (i < p_Size - 3)
     {
@@ -239,11 +239,25 @@ static void ConvertAnnexBToLengthPrefixed(const uint8_t* p_pData, int p_Size, st
                 static_cast<uint8_t>((nalLen >> 8) & 0xFF),
                 static_cast<uint8_t>(nalLen & 0xFF),
             };
-            p_Out.insert(p_Out.end(), lenBytes, lenBytes + 4);
-            p_Out.insert(p_Out.end(), p_pData + nalStart, p_pData + nalEnd);
+            if (p_pOut)
+            {
+                memcpy(p_pOut + outPos, lenBytes, 4);
+                memcpy(p_pOut + outPos + 4, p_pData + nalStart, static_cast<size_t>(nalLen));
+            }
+            outPos += 4 + static_cast<size_t>(nalLen);
         }
 
         i = nalEnd;
+    }
+    return outPos;
+}
+
+static void ConvertAnnexBToLengthPrefixed(const uint8_t* p_pData, int p_Size, std::vector<uint8_t>& p_Out)
+{
+    p_Out.resize(ConvertAnnexBToLengthPrefixedRaw(p_pData, p_Size, nullptr));
+    if (!p_Out.empty())
+    {
+        ConvertAnnexBToLengthPrefixedRaw(p_pData, p_Size, p_Out.data());
     }
 }
 
@@ -827,42 +841,41 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
         m_pCtx->thread_count = static_cast<int>((hwThreads > 0 && hwThreads <= 32) ? hwThreads : (hwThreads > 32 ? 32 : 8));
     }
 
-    // Color space signalling — color_range was already set above, but
-    // color_primaries/color_trc/colorspace were never set at all, so a
-    // delivered file carried no signal of which color space it was
-    // actually encoded in. Some playback pipelines then guess wrong,
-    // which reads as "colors look off"/quality complaints unrelated to
-    // bit-rate. Prefer the real signal from Resolve (clrPrimaries) when
-    // present — its numbering is assumed to follow the same ISO/IEC
-    // 23001-8 (CICP) convention AVColorPrimaries/AVColorTransferCharacteristic/
-    // AVColorSpace already use, which is the standard convention for this
-    // exact kind of property in the broadcast/codec world, but this exact
-    // mapping has NOT been confirmed against a real Resolve export — fall
-    // back to an explicit default otherwise (BT.709 for 8-bit, BT.2020 for
-    // 10-bit — a reasonable heuristic, not a guarantee of the true source).
+    // Color tags from the host's CICP-style clrPrimaries/clrTransfer/clrMtx
+    // (ISO/IEC 23001-8 numbering assumed, NOT yet confirmed against a real
+    // Resolve export). Only whitelisted values are forwarded; anything
+    // absent/unknown falls back to Rec.709 — never inferred from bit depth.
     {
-        // `clrPrimaries` is a single "which primaries" hint — NOT three
-        // separate primaries/transfer/matrix values, so color_trc/colorspace
-        // are derived from WHICH primaries we got (small explicit mapping),
-        // never a blind reuse of the same raw number across three different
-        // enumerations (those don't share a numbering scheme beyond a few
-        // coincidental low values).
-        int16_t rawPrimaries = 0;
-        bool haveBt2020 = p_pBuff->GetINT16("clrPrimaries", rawPrimaries) && (rawPrimaries == AVCOL_PRI_BT2020);
-        bool wantWideGamut = haveBt2020 || (m_pVariant->bitDepth >= 10);
+        int16_t rawPri = 0, rawTrc = 0, rawMtx = 0;
+        const bool havePri = p_pBuff->GetINT16(pIOPropColorPrimaries, rawPri);
+        const bool haveTrc = p_pBuff->GetINT16(pIOTransferCharacteristics, rawTrc);
+        const bool haveMtx = p_pBuff->GetINT16(pIOColorMatrix, rawMtx);
 
-        if (wantWideGamut)
-        {
-            m_pCtx->color_primaries = AVCOL_PRI_BT2020;
-            m_pCtx->color_trc = AVCOL_TRC_BT2020_10;
-            m_pCtx->colorspace = AVCOL_SPC_BT2020_NCL;
-        }
-        else
-        {
-            m_pCtx->color_primaries = AVCOL_PRI_BT709;
-            m_pCtx->color_trc = AVCOL_TRC_BT709;
-            m_pCtx->colorspace = AVCOL_SPC_BT709;
-        }
+        AVColorPrimaries pri = AVCOL_PRI_BT709;
+        AVColorTransferCharacteristic trc = AVCOL_TRC_BT709;
+        AVColorSpace mtx = AVCOL_SPC_BT709;
+
+        if (havePri && (rawPri == AVCOL_PRI_BT709 || rawPri == AVCOL_PRI_BT2020 || rawPri == AVCOL_PRI_SMPTE432))
+            pri = static_cast<AVColorPrimaries>(rawPri); // Rec.709 / Rec.2020 / P3-D65
+        if (haveTrc && (rawTrc == AVCOL_TRC_BT709 || rawTrc == AVCOL_TRC_SMPTE2084 ||
+                        rawTrc == AVCOL_TRC_ARIB_STD_B67 || rawTrc == AVCOL_TRC_BT2020_10))
+            trc = static_cast<AVColorTransferCharacteristic>(rawTrc); // 709 / PQ / HLG
+        else if (pri == AVCOL_PRI_BT2020)
+            trc = AVCOL_TRC_BT2020_10; // wide gamut, no transfer signalled
+
+        if (haveMtx && (rawMtx == AVCOL_SPC_BT709 || rawMtx == AVCOL_SPC_BT2020_NCL))
+            mtx = static_cast<AVColorSpace>(rawMtx);
+        else if (pri == AVCOL_PRI_BT2020)
+            mtx = AVCOL_SPC_BT2020_NCL;
+        // P3-D65 has no dedicated NCL matrix here: BT.709 matrix is the
+        // common convention for P3-D65 YUV (Apple/DCI-P3 deliverables).
+
+        m_pCtx->color_primaries = pri;
+        m_pCtx->color_trc = trc;
+        m_pCtx->colorspace = mtx;
+        g_Log(logLevelInfo, "GDC Encoder :: color tags host(pri=%d/%d trc=%d/%d mtx=%d/%d) -> applied pri=%d trc=%d mtx=%d",
+              static_cast<int>(rawPri), havePri, static_cast<int>(rawTrc), haveTrc, static_cast<int>(rawMtx), haveMtx,
+              static_cast<int>(pri), static_cast<int>(trc), static_cast<int>(mtx));
     }
 
     if (m_QualityMode == 1)
@@ -1084,6 +1097,24 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     uint32_t width = m_pCtx->width;
     uint32_t height = m_pCtx->height;
 
+    // 4:2:0 chroma planes are (w/2)x(h/2) below: odd dimensions would read
+    // past the tightly packed source layout. Refuse instead of corrupting.
+    if ((width & 1u) || (height & 1u))
+    {
+        g_Log(logLevelError, "GDC Encoder :: odd frame size %ux%u not supported for 4:2:0 planar input", width, height);
+        p_pBuff->UnlockBuffer();
+        return errFail;
+    }
+
+    // Encoder may still hold a reference to the previous frame's buffers
+    // (x264/x265 lookahead, hardware encoders): make sure we own them.
+    if (av_frame_make_writable(p_pFrame) < 0)
+    {
+        g_Log(logLevelError, "GDC Encoder :: av_frame_make_writable FAILED at frame %d", static_cast<int>(m_FrameCount));
+        p_pBuff->UnlockBuffer();
+        return errAlloc;
+    }
+
     // Resolve delivers planar YUV 4:2:0 (Y plane, then U plane, then V
     // plane, tightly packed) matching pIOPropColorModel=clrYUVp + 2/2
     // subsampling declared in s_RegisterCodecs. For 10-bit variants, each
@@ -1120,6 +1151,7 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
         }
         if (!m_pSwsCtx)
         {
+            g_Log(logLevelError, "GDC Encoder :: sws_getContext FAILED (%ux%u)", width, height);
             p_pBuff->UnlockBuffer();
             return errFail;
         }
@@ -1218,28 +1250,33 @@ StatusCode FFmpegEncoder::DrainPackets()
 
 StatusCode FFmpegEncoder::SendPacketToHost(AVPacket* p_pPkt)
 {
-    std::vector<uint8_t> lengthPrefixed;
-    ConvertAnnexBToLengthPrefixed(p_pPkt->data, p_pPkt->size, lengthPrefixed);
-    if (lengthPrefixed.empty())
-    {
-        // Some hardware encoders may already emit length-prefixed NALs
-        // directly rather than Annex-B — fall back to the raw packet as-is.
-        lengthPrefixed.assign(p_pPkt->data, p_pPkt->data + p_pPkt->size);
-    }
+    // Two-pass, no intermediate heap buffer: measure, then write straight
+    // into the host buffer. Empty result = packet already length-prefixed
+    // (some hardware encoders) -> copy it as-is.
+    const size_t convSize = ConvertAnnexBToLengthPrefixedRaw(p_pPkt->data, p_pPkt->size, nullptr);
+    const bool passthrough = (convSize == 0);
+    const size_t outSize = passthrough ? static_cast<size_t>(p_pPkt->size) : convSize;
 
     HostBufferRef outBuf(false);
-    if (!outBuf.IsValid() || !outBuf.Resize(lengthPrefixed.size()))
+    if (!outBuf.IsValid() || !outBuf.Resize(outSize))
     {
         return errAlloc;
     }
 
     char* pOutBuf = nullptr;
     size_t outBufSize = 0;
-    if (!outBuf.LockBuffer(&pOutBuf, &outBufSize))
+    if (!outBuf.LockBuffer(&pOutBuf, &outBufSize) || outBufSize < outSize)
     {
         return errAlloc;
     }
-    memcpy(pOutBuf, lengthPrefixed.data(), lengthPrefixed.size());
+    if (passthrough)
+    {
+        memcpy(pOutBuf, p_pPkt->data, outSize);
+    }
+    else
+    {
+        ConvertAnnexBToLengthPrefixedRaw(p_pPkt->data, p_pPkt->size, reinterpret_cast<uint8_t*>(pOutBuf));
+    }
     outBuf.UnlockBuffer();
 
     int64_t pts = p_pPkt->pts;

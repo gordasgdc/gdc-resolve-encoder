@@ -5,6 +5,13 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.4.3 (2026-09-21) — Culori corecte în fișierele exportate + robustețe
+
+- **Etichete de culoare corecte**: fișierul exportat poartă acum spațiul de culoare real cerut de proiect (Rec.709, Rec.2020, P3-D65; transfer PQ sau HLG). Înainte, orice export 10-bit era etichetat automat Rec.2020, indiferent de proiect. Dacă informația lipsește, se folosește Rec.709.
+- **Mai stabil la export**: dimensiunile de cadru impare sunt refuzate cu un mesaj clar în loc să producă imagine coruptă, iar cadrele sunt pregătite corect înainte de codare.
+- **Mai puțină memorie folosită** la trimiterea fiecărui pachet video către Resolve.
+- **Verificare automată la publicare**: pachetul Mac/Windows este testat că se încarcă corect înainte de a ajunge la utilizatori.
+
 ## v1.4.2 (2026-09-05) — Fix definitiv: plugin-ul nu mai depinde de FFmpeg-ul de pe mașina ta (Mac)
 
 **Rezolvă definitiv fragilitatea semnalată în v1.4.1**: pluginul Mac

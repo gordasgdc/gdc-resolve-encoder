@@ -40,6 +40,10 @@ jobs:
           ./bundle_ffmpeg_mac.sh "${{ env.PLUGIN_NAME }}.dvcp.bundle" "${{ env.PLUGIN_NAME }}.dvcp"
           codesign --force --sign - "$BUNDLE/${{ env.PLUGIN_NAME }}.dvcp"
 
+          # dlopen smoke test on the BUNDLED plugin (fails the build if the
+          # dylibs in Contents/Frameworks don't resolve, SONAME-mismatch class).
+          python3 tests/check_load.py "$BUNDLE/${{ env.PLUGIN_NAME }}.dvcp"
+
           mkdir -p dist_mac
           cp -R "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_mac/
           cp install.sh dist_mac/
@@ -120,6 +124,10 @@ jobs:
           Copy-Item "ffmpeg\bin\avutil-*.dll" $bundle
           Copy-Item "ffmpeg\bin\swscale-*.dll" $bundle
           Copy-Item "ffmpeg\bin\swresample-*.dll" $bundle
+
+          # LoadLibrary smoke test on the bundled plugin + its FFmpeg DLLs.
+          python tests\check_load.py "$bundle\${{ env.PLUGIN_NAME }}.dvcp"
+          if ($LASTEXITCODE -ne 0) { throw "check_load.py failed" }
           New-Item -ItemType Directory -Force -Path dist_win
           Copy-Item "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_win -Recurse
           Copy-Item "docs\guides\*.pdf" dist_win
