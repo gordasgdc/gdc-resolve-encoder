@@ -97,7 +97,7 @@ final class Renderer {
             c.setStrokeColor(cLine.cgColor); c.setLineWidth(0.5)
             c.move(to: CGPoint(x: mL, y: H - 50)); c.addLine(to: CGPoint(x: W - mR, y: H - 50)); c.strokePath()
             c.move(to: CGPoint(x: mL, y: 46)); c.addLine(to: CGPoint(x: W - mR, y: 46)); c.strokePath()
-            let foot = attributed("v\(docVersion)  ·  pagina \(pageNo)", size: 8, color: cMuted, align: .right)
+            let foot = attributed("v\(docVersion)  ·  \(L.page) \(pageNo)", size: 8, color: cMuted, align: .right)
             drawLine(foot, x: mL, top: H - 40, width: cw)
         }
         y = mTop
@@ -231,9 +231,9 @@ final class Renderer {
     func noteBlock(_ kind: Callout, _ t: String) {
         let (bg, bar, label): (NSColor, NSColor, String) = {
             switch kind {
-            case .info: return (rgb(0xE8EEF5), rgb(0x6B8CB0), "De reținut")
-            case .warn: return (rgb(0xFBECEA), rgb(0xC4453A), "Atenție")
-            case .tip:  return (rgb(0xEAF4EA), rgb(0x4C8C4A), "Sfat")
+            case .info: return (rgb(0xE8EEF5), rgb(0x6B8CB0), L.info)
+            case .warn: return (rgb(0xFBECEA), rgb(0xC4453A), L.warn)
+            case .tip:  return (rgb(0xEAF4EA), rgb(0x4C8C4A), L.tip)
             }
         }()
         let s = attributed("**\(label).** " + t, size: 9.6, lineSpacing: 2)
@@ -251,10 +251,10 @@ final class Renderer {
         c.setFillColor(cAmber.cgColor); c.fill(CGRect(x: mL, y: H - 250, width: 84, height: 4))
         drawLine(attributed("GDC", size: 15, color: cAmber, boldAll: true), x: mL, top: 120, width: cw)
         drawLine(attributed("GDC Resolve\nEncoder", size: 46, color: .white, boldAll: true, lineSpacing: 4), x: mL, top: 160, width: cw)
-        drawLine(attributed("Whitepaper tehnic și ghid complet de configurare", size: 17, color: rgb(0xEDEFF2)), x: mL, top: 275, width: cw)
-        drawLine(attributed("Codecuri H.264 și H.265 (x264 / x265), 10-bit, 4:2:2, HDR10 și formate proprii\npentru DaVinci Resolve Studio", size: 11.5, color: rgb(0xA9B0BA), lineSpacing: 3), x: mL, top: 310, width: cw)
-        drawLine(attributed("Versiunea \(docVersion)  ·  21 septembrie 2026", size: 11, color: cAmber, boldAll: true), x: mL, top: H - 120, width: cw)
-        drawLine(attributed("Document informativ. Valorile de export sunt puncte de plecare; verifică specificațiile curente ale fiecărei platforme înainte de livrare.", size: 8.5, color: rgb(0x8A929D)), x: mL, top: H - 96, width: cw - 60)
+        drawLine(attributed(L.coverSub, size: 17, color: rgb(0xEDEFF2)), x: mL, top: 275, width: cw)
+        drawLine(attributed(L.coverDesc, size: 11.5, color: rgb(0xA9B0BA), lineSpacing: 3), x: mL, top: 310, width: cw)
+        drawLine(attributed(String(format: L.coverVer, docVersion), size: 11, color: cAmber, boldAll: true), x: mL, top: H - 120, width: cw)
+        drawLine(attributed(L.disclaimer, size: 8.5, color: rgb(0x8A929D)), x: mL, top: H - 96, width: cw - 60)
     }
 
 }
@@ -310,7 +310,7 @@ extension Renderer {
         for tp in 0..<tocPages {
             beginPage()
             if tp == 0 {
-                paragraph(attributed("Cuprins", size: 22, color: cText, boldAll: true), after: 6)
+                paragraph(attributed(L.toc, size: 22, color: cText, boldAll: true), after: 6)
                 if let c = ctx { c.setFillColor(cAmber.cgColor); c.fill(CGRect(x: mL, y: H - y - 2, width: 64, height: 3)) }
                 y += 16
             }
@@ -338,11 +338,11 @@ extension Renderer {
 func verify(url: URL, requiredPhrases: [String], forbidden: [String], expectedPages: Int) -> Bool {
     guard let doc = PDFDocument(url: url) else { print("EROARE: PDF ilizibil"); return false }
     var ok = true
-    print("Pagini: \(doc.pageCount) (așteptat \(expectedPages))")
+    print("\(L.pagesLbl): \(doc.pageCount) (\(expectedPages))")
     if doc.pageCount != expectedPages { print("  EROARE: număr de pagini diferit"); ok = false }
     var empty: [Int] = []
     for i in 0..<doc.pageCount { if (doc.page(at: i)?.string ?? "").trimmingCharacters(in: .whitespacesAndNewlines).count < 20 { empty.append(i + 1) } }
-    print("Pagini fără text: \(empty.isEmpty ? "niciuna" : empty.map(String.init).joined(separator: ","))")
+    print("\(L.noText): \(empty.isEmpty ? "niciuna" : empty.map(String.init).joined(separator: ","))")
     if !empty.isEmpty { ok = false }
     // margini: cutia de text a fiecărei pagini trebuie să rămână în interiorul zonei utile
     var marginBad: [Int] = []
@@ -358,19 +358,19 @@ func verify(url: URL, requiredPhrases: [String], forbidden: [String], expectedPa
         }
         if minX < 40 || maxX > box.width - 40 || minY < 24 || maxY > box.height - 24 { marginBad.append(i + 1) }
     }
-    print("Pagini cu text în afara marginilor: \(marginBad.isEmpty ? "niciuna" : marginBad.map(String.init).joined(separator: ","))")
+    print("\(L.outMargins): \(marginBad.isEmpty ? "niciuna" : marginBad.map(String.init).joined(separator: ","))")
     if !marginBad.isEmpty { ok = false }
     let full = doc.string ?? ""
     var missing: [String] = []
     for p in requiredPhrases where !full.contains(p) { missing.append(p) }
-    print("Secțiuni obligatorii: \(requiredPhrases.count - missing.count)/\(requiredPhrases.count)")
+    print("\(L.sectionsFound): \(requiredPhrases.count - missing.count)/\(requiredPhrases.count)")
     if !missing.isEmpty { print("  LIPSESC: \(missing)"); ok = false }
     var bad: [String] = []
     for f in forbidden {
         if let re = try? NSRegularExpression(pattern: f, options: [.caseInsensitive]),
            re.firstMatch(in: full, range: NSRange(full.startIndex..., in: full)) != nil { bad.append(f) }
     }
-    print("Cuvinte/șabloane interzise găsite: \(bad.isEmpty ? "niciunul" : bad.joined(separator: ", "))")
+    print("\(L.forbiddenLbl): \(bad.isEmpty ? "niciunul" : bad.joined(separator: ", "))")
     if !bad.isEmpty { ok = false }
     let words = full.split { $0.isWhitespace }.count
     print("Cuvinte: ~\(words)")
@@ -379,16 +379,15 @@ func verify(url: URL, requiredPhrases: [String], forbidden: [String], expectedPa
 
 // ───────── punct de intrare ─────────
 let args = CommandLine.arguments
-let outPath = args.count > 1 ? args[1] : "GDC_Resolve_Encoder_Whitepaper_RO.pdf"
+let lang = args.count > 1 ? args[1] : "ro"
+let blocks = setLanguage(lang)
+let outPath = args.count > 2 ? args[2] : L.outName
 let out = URL(fileURLWithPath: outPath)
 let version = "1.7.0"
-let title = "GDC Resolve Encoder — Whitepaper tehnic"
-let blocks = whitepaperBlocks()
+let title = L.docTitle
 let res = buildPDF(blocks: blocks, out: out, version: version, title: title)
 let sections = res.toc.filter { $0.level == 1 }.map { $0.title }
-print("Titluri de capitol: \(sections.count), intrări în cuprins: \(res.toc.count)")
-let ok = verify(url: out, requiredPhrases: sections + ["HDR10", "MaxCLL", "YouTube", "TikTok", "Instagram", "Facebook", "GDC MP4", "x265"],
-                forbidden: ["preț", "cumpăr", "vânzare", "\\bprice\\b", "\\bbuy\\b", "\\bsale\\b", "Cristi", "\\.cpp", "\\.swift", "CLAUDE"],
-                expectedPages: res.pages)
-print(ok ? "VERIFICARE OK → \(outPath)" : "VERIFICARE EȘUATĂ")
+print("[\(lang)] chapters: \(sections.count), TOC entries: \(res.toc.count)")
+let ok = verify(url: out, requiredPhrases: sections + L.required, forbidden: L.forbidden, expectedPages: res.pages)
+print(ok ? "VERIFY OK → \(outPath)" : "VERIFY FAILED")
 exit(ok ? 0 : 1)
