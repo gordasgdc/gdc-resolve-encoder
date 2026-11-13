@@ -1,36 +1,38 @@
-TERMENI ȘI CONDIȚII — GDC Resolve Encoder
-Ultima actualizare: 4 septembrie 2026
+GDC RESOLVE ENCODER — LICENȚĂ ȘI TERMENI / LICENCE AND TERMS
+Versiunea 1.8.0 — macOS
 
-1. LICENȚA
-GDC Resolve Encoder ("Plugin-ul") este dezvoltat de Cristi Gordas ("GDC",
-"Dezvoltatorul"). Prin instalarea și utilizarea Plugin-ului, accepți acești
-termeni.
+ROMÂNĂ
+1. Gratuit și deschis. GDC Resolve Encoder este software gratuit, creat de Dumitru Cristinel Gordas (GDC).
+   Îl poți instala și folosi, personal sau profesional, împreună cu DaVinci Resolve Studio, fără plată, fără cheie
+   de activare, fără perioadă de probă, fără cont și fără donație obligatorie.
+2. Licențe. Codul propriu al plugin-ului este sub licența MIT. Pachetul macOS include și biblioteci FFmpeg, x264,
+   x265 și altele (licențe GPL, LGPL, BSD, Apache). Fiindcă FFmpeg-ul inclus este construit cu opțiunile GPL și
+   folosește x264/x265, pachetul macOS se distribuie sub termenii GNU GPL versiunea 3 sau ulterioară. Textele
+   licențelor se instalează în folderul plugin-ului (Contents/Resources/Licenses), iar codul sursă
+   corespunzător este disponibil la https://github.com/gordasgdc/gdc-resolve-encoder.
+3. Fără garanție. Software-ul se oferă „ca atare” (AS IS), fără nicio garanție, în măsura permisă de lege.
+   Dezvoltatorul nu răspunde pentru exporturi eșuate, fișiere pierdute sau alte pagube.
+4. Brevete. Formatele H.264/AVC și H.265/HEVC pot fi acoperite de brevete în unele țări; folosirea lor rămâne
+   în răspunderea ta.
+5. Independență. Proiectul este independent și nu este afiliat cu Blackmagic Design. „DaVinci Resolve” este o
+   marcă a Blackmagic Design Pty Ltd.
+6. Confidențialitate. Plugin-ul nu colectează date personale, nu are telemetrie și nu folosește rețeaua în timpul
+   exportului.
 
-Îți este acordată o licență personală, netransmisibilă, de a instala și
-folosi Plugin-ul pe calculatoarele tale, pentru uz propriu sau profesional,
-împreună cu DaVinci Resolve Studio.
+ENGLISH
+1. Free and open. GDC Resolve Encoder is free software by Dumitru Cristinel Gordas (GDC). You may install and use
+   it, personally or professionally, with DaVinci Resolve Studio, with no payment, activation key, trial period,
+   account or mandatory donation.
+2. Licences. The plugin's own code is MIT-licensed. The macOS package also contains FFmpeg, x264, x265 and other
+   libraries (GPL, LGPL, BSD, Apache). Because the bundled FFmpeg is built with GPL options and uses x264/x265,
+   the macOS package is distributed under the terms of the GNU GPL version 3 or later. The licence texts are
+   installed in the plugin folder (Contents/Resources/Licenses) and the corresponding source code is available at
+   https://github.com/gordasgdc/gdc-resolve-encoder.
+3. No warranty. The software is provided "AS IS", without warranty of any kind, to the extent permitted by law.
+   The developer is not liable for failed exports, lost files or other damages.
+4. Patents. H.264/AVC and H.265/HEVC may be covered by patents in some countries; their use is your responsibility.
+5. Independence. This project is independent and not affiliated with Blackmagic Design. "DaVinci Resolve" is a
+   trademark of Blackmagic Design Pty Ltd.
+6. Privacy. The plugin collects no personal data, has no telemetry and does not use the network while exporting.
 
-2. NATURA PROIECTULUI
-Acesta este un proiect independent, neafiliat cu Blackmagic Design.
-Plugin-ul este oferit "ca atare" (AS IS), fără nicio garanție explicită
-sau implicită. Dezvoltatorul nu este responsabil pentru pierderi directe
-sau indirecte rezultate din utilizarea sau imposibilitatea utilizării
-Plugin-ului, inclusiv exporturi eșuate sau fișiere corupte.
-
-3. LICENȚIERE
-Plugin-ul poate necesita o cheie de activare, legată de identificatorul
-mașinii tale (Machine ID). Susținerea dezvoltării se face exclusiv sub
-formă de donație — contactează Dezvoltatorul prin WhatsApp (detalii în
-panoul de setări al Plugin-ului) pentru activare.
-
-4. FĂRĂ COLECTARE DE DATE
-Plugin-ul nu colectează date personale și nu trimite telemetrie. Nu are
-nicio conexiune la rețea în timpul encodării.
-
-5. MODIFICĂRI
-Acești termeni pot fi actualizați odată cu versiuni viitoare ale
-Plugin-ului. Continuarea folosirii Plugin-ului după o actualizare
-înseamnă acceptarea noilor termeni.
-
-Prin bifarea căsuței de acceptare din acest instalator, confirmi că ai
-citit și ești de acord cu acești termeni.
+Prin acceptarea acestui text confirmi că l-ai citit / By accepting you confirm you have read it.

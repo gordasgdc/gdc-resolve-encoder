@@ -22,24 +22,40 @@ VERSION="${1:?Usage: ./build_installer.sh <versiune, ex 1.4.1>}"
 PLUGIN_NAME="gdc_resolve_encoder"
 BUNDLE_NAME="${PLUGIN_NAME}.dvcp.bundle"
 PKG_ID="com.gordasgdc.resolveencoder.installer"
-DIST_DIR="dist"
+DIST_DIR="${GDC_DIST_DIR:-dist}"
+BUILD_DIR="${GDC_BUILD_DIR:-build}"
 PAYLOAD_ROOT="$DIST_DIR/payload"
 COMPONENT_PKG="$DIST_DIR/${PLUGIN_NAME}-component.pkg"
 FINAL_PKG="$DIST_DIR/GDCResolveEncoder-$VERSION.pkg"
 INSTALL_DEST="Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins"
 
 echo "==> Compilez plugin-ul (local, pe FFmpeg-ul instalat pe ACEASTA masina)..."
-rm -rf build
-cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j
+rm -rf "$BUILD_DIR"
+cmake -S . -B "$BUILD_DIR" -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 \
+    -DCMAKE_OSX_DEPLOYMENT_TARGET="${GDC_MACOS_MIN:-26.0}" ${GDC_SYSROOT:+-DCMAKE_OSX_SYSROOT="$GDC_SYSROOT"}
+cmake --build "$BUILD_DIR" -j
 
 echo "==> Pregatesc bundle-ul..."
 rm -rf "$DIST_DIR"
 BUNDLE_DIR="$DIST_DIR/${BUNDLE_NAME}"
 mkdir -p "$BUNDLE_DIR/Contents/MacOS"
-cp "build/${PLUGIN_NAME}.dvcp" "$BUNDLE_DIR/Contents/MacOS/"
+cp "$BUILD_DIR/${PLUGIN_NAME}.dvcp" "$BUNDLE_DIR/Contents/MacOS/"
 
 ./bundle_ffmpeg_mac.sh "$BUNDLE_DIR" "${PLUGIN_NAME}.dvcp"
+
+echo "==> Verific minimul macOS declarat (LC_BUILD_VERSION minos)..."
+MIN_WANT="${GDC_MACOS_MIN:-26.0}"
+for f in "$BUNDLE_DIR/Contents/MacOS/${PLUGIN_NAME}.dvcp" "$BUNDLE_DIR"/Contents/Frameworks/*.dylib; do
+    m=$(vtool -show-build "$f" | awk '/minos/{print $2}')
+    if [ "$(printf '%s\n%s\n' "$m" "$MIN_WANT" | sort -V | tail -1)" != "$MIN_WANT" ]; then
+        echo "EROARE: $(basename "$f") cere macOS $m > $MIN_WANT" >&2; exit 1
+    fi
+done
+echo "    minimul declarat al tuturor binarelor: <= $MIN_WANT"
+
+echo "==> Adaug textele de licență (GPL/LGPL/BSD) în bundle..."
+mkdir -p "$BUNDLE_DIR/Contents/Resources/Licenses"
+cp legal/texts/* legal/SOURCES.md THIRD_PARTY_LICENSES.md "$BUNDLE_DIR/Contents/Resources/Licenses/"
 
 if [ -n "${APPLE_SIGN_IDENTITY_APP:-}" ]; then
     echo "==> Semnez binarul plugin-ului..."

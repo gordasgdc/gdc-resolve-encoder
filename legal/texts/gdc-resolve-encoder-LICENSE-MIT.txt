@@ -1,0 +1,34 @@
+MIT License
+
+Copyright (c) 2026 Cristi Gordas (GDC)
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+---
+
+This project links against and redistributes header/wrapper files from
+Blackmagic Design's DaVinci Resolve IO Encode Plugin SDK (see include/ and
+wrapper/ folders, and docs/SDK-README.txt). Those files are Blackmagic
+Design's own and are included here as required to build against their SDK;
+they are not covered by the MIT license above.
+
+This project also links against FFmpeg (https://ffmpeg.org) at build time.
+FFmpeg's libavcodec/libavutil/libswscale are licensed under LGPL/GPL
+depending on build configuration — check the license of the specific
+FFmpeg build you link against before redistributing compiled binaries.

@@ -5,11 +5,10 @@
 #include <string>
 #include <vector>
 
-#include "wrapper/plugin_api.h"
+#include <memory>
 
-extern "C" {
-#include <libavformat/avformat.h>
-}
+#include "wrapper/plugin_api.h"
+#include "gdc_mux.h"
 
 using namespace IOPlugin;
 
@@ -54,26 +53,13 @@ protected:
     virtual ~GdcContainer();
 
 private:
-    struct StreamInfo
-    {
-        bool isVideo = false;
-        int bytesPerSample = 0;
-        int channels = 0;
-        int64_t audioSamplesWritten = 0;
-    };
-
-    StatusCode AddVideoTrack(HostPropertyCollectionRef* p_pProps, HostPropertyCollectionRef* p_pCodecProps, uint32_t* p_pStreamIdx);
-    StatusCode AddAudioTrack(HostPropertyCollectionRef* p_pProps, uint32_t* p_pStreamIdx);
-    StatusCode EnsureHeader();
-    StatusCode EnsureContext();
+    void EnsureMux();
 
 private:
     const ContainerFormat* m_pFormat;
-    AVFormatContext* m_pFmtCtx;
+    std::unique_ptr<GdcMux> m_pMux;
     std::string m_Path;
-    bool m_HeaderWritten;
-    bool m_HeaderFailed;
+    int m_EncoderFailuresAtStart;
     std::mutex m_Mutex;
-    std::vector<StreamInfo> m_Streams; // indexed by AVStream::index
     std::vector<GdcTrackWriter*> m_Tracks;
 };

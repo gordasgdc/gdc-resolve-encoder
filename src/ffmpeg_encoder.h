@@ -72,6 +72,8 @@ private:
     int32_t m_HdrMaxLum;    // mastering display peak, nits
     int32_t m_HdrMaxCLL;    // nits, 0 = not signalled
     int32_t m_HdrMaxFALL;   // nits, 0 = not signalled
+    int32_t m_HwQuality;    // hardware constant quality, 1-100 (VideoToolbox)
+    int m_HwDtsDelay;       // VideoToolbox: frames of decode delay used to synthesise DTS (0 = trust the encoder)
 
     int64_t m_FrameCount;
     int64_t m_PacketCount;

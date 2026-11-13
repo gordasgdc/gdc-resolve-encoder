@@ -5,6 +5,18 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.8.0 (2026-11-13) — Ediție macOS gratuită, 10-bit corectat, H.264 în formatele GDC
+
+- **Gratuit, fără condiții**: nu mai există licență, cheie de activare, perioadă de probă, cont sau donație obligatorie. Instalezi și exporți.
+- **10-bit 4:2:0 corectat** (H.264 High 10 și H.265 Main 10): imaginea exportată corespunde din nou sursei, iar fișierele au dimensiunea așteptată.
+- **H.264 în formatele GDC (QuickTime, MP4, Matroska)**: fișierele se scriu corect și se pot reda; înainte, exporturile H.264 software puteau ieși fără imagine utilizabilă.
+- **H.264 cu Apple VideoToolbox în formatele GDC**: exportul se încheie fără eroare.
+- **Calitate constantă reală pe VideoToolbox**: sliderul „Quality" (1–100) controlează acum efectiv rata de biți.
+- **Export eșuat**: nu rămâne un fișier nefinalizat, iar motivul apare în jurnalul Resolve. **Export oprit de utilizator**: rămâne un fișier valid, până la ultimul cadru scris.
+- Versiunea apare în panoul plugin-ului și în jurnal; jurnalul conține și setările de control al ratei folosite.
+- Pachetul macOS include acum textele de licență ale tuturor bibliotecilor (FFmpeg, x264, x265 etc.) și indicații pentru codul sursă.
+- Windows: neschimbat în această versiune; contribuțiile sunt binevenite (vezi README).
+
 ## v1.7.0 (2026-09-21) — Formate proprii: GDC QuickTime, GDC MP4, GDC Matroska (cu HDR în fișier)
 
 - **Trei formate noi în lista Format din Deliver**: `GDC QuickTime`, `GDC MP4` și `GDC Matroska`. Nu mai trebuie să alegi întâi QuickTime și apoi codecul: alegi formatul GDC și codecul GDC direct, cu setările plugin-ului (inclusiv HDR10) imediat dedesubt.

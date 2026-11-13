@@ -1,7 +1,8 @@
 #include <algorithm>
 #include "ffmpeg_encoder.h"
-#include "license_check.h"
+#include "pixconv.h"
 #include "gdc_container.h"
+#include "bitstream.h"
 
 #include <cstring>
 #include <cmath>
@@ -9,282 +10,52 @@
 #include <string>
 #include <thread>
 #include <chrono>
+#include <atomic>
+#include <mutex>
+#include <cstdarg>
 
 extern "C" {
 #include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
+#include <libavutil/pixdesc.h>
 }
 
-static int NalTypeH264(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty() ? -1 : (p_Nal[0] & 0x1F); }
-static int NalTypeH265(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty() ? -1 : ((p_Nal[0] >> 1) & 0x3F); }
+using namespace gdc_bs;
 
-// ─────────────────────────────────────────────────────────────────────────
-// Licentiere — INLOCUIESTE cu cheia TA publica, generata de keygen.py
-// (gdc-license-system). Valoarea de mai jos e doar un exemplu si NU va
-// valida niciun cod real generat cu cheia ta privata.
-static const std::string kLicensePublicKeyB64 = "I1h23MNMRbOhc0ObKJrfa3oFHKA9w+SzbNrroAIy8hs=";
-static const std::string kLicenseProductID = "gdc-resolve-encoder";
+#ifndef GDC_ENCODER_VERSION
+#define GDC_ENCODER_VERSION "dev"
+#endif
 
-// ─────────────────────────────────────────────────────────────────────────
-// Proper ISO/IEC 14496-15 hvcC construction for H.265 only.
-//
-// H.264 uses the reference-matched Annex-B cookie (proven working). But the
-// official reference has no HEVC variant at all, so that approach was never
-// actually validated for H.265 — and "only audio, no video" after a
-// confirmed-complete, error-free encode strongly suggests Resolve's writer
-// needs a properly structured hvcC box for HEVC specifically, not a raw
-// NAL concatenation. This exact bit-parsing logic was verified earlier by
-// encoding real test clips with libx265, extracting the true field values
-// via FFmpeg's own `trace_headers` bitstream filter as ground truth, and
-// confirming exact matches field-for-field before ever using it here.
-// ─────────────────────────────────────────────────────────────────────────
-class RbspBitReader
+// Encoder-side failure counter, read by the GDC containers so that a render
+// whose ENCODER failed never leaves a partial file that looks like an export.
+std::atomic<int> g_GdcEncoderFailureCount{ 0 };
+
+// libav* diagnostics -> Resolve's log (davinci_resolve.log). Warnings and
+// errors only; installed once. Without this, a muxer/encoder refusal showed
+// up as a bare numeric code with no reason.
+static void GdcAvLogCallback(void* p_pAvcl, int p_Level, const char* p_pFmt, va_list p_Args)
 {
-public:
-    explicit RbspBitReader(const std::vector<uint8_t>& p_Data)
-    {
-        int zeroCount = 0;
-        for (size_t i = 0; i < p_Data.size(); ++i)
-        {
-            uint8_t b = p_Data[i];
-            if (zeroCount >= 2 && b == 3) { zeroCount = 0; continue; }
-            zeroCount = (b == 0) ? (zeroCount + 1) : 0;
-            m_Data.push_back(b);
-        }
-    }
-
-    int ReadBit()
-    {
-        size_t byteIdx = m_BitPos / 8;
-        if (byteIdx >= m_Data.size()) return 0;
-        int bitIdx = 7 - static_cast<int>(m_BitPos % 8);
-        int bit = (m_Data[byteIdx] >> bitIdx) & 1;
-        ++m_BitPos;
-        return bit;
-    }
-
-    uint64_t ReadBits(int p_N)
-    {
-        uint64_t v = 0;
-        for (int i = 0; i < p_N; ++i) v = (v << 1) | static_cast<uint64_t>(ReadBit());
-        return v;
-    }
-
-    uint32_t ReadUE()
-    {
-        int zeros = 0;
-        while (ReadBit() == 0)
-        {
-            ++zeros;
-            if (zeros > 32) return 0;
-        }
-        if (zeros == 0) return 0;
-        return static_cast<uint32_t>((1u << zeros) - 1 + ReadBits(zeros));
-    }
-
-private:
-    std::vector<uint8_t> m_Data;
-    size_t m_BitPos = 0;
-};
-
-struct H265SpsInfo
-{
-    uint8_t profileSpace = 0, tierFlag = 0, profileIdc = 0, levelIdc = 0;
-    uint32_t profileCompatFlags = 0;
-    uint64_t constraintFlags = 0;
-    uint32_t chromaFormatIdc = 1, bitDepthLumaMinus8 = 0, bitDepthChromaMinus8 = 0;
-};
-
-static H265SpsInfo ParseH265Sps(const std::vector<uint8_t>& p_SpsNal)
-{
-    H265SpsInfo info;
-    if (p_SpsNal.size() < 4) return info;
-    std::vector<uint8_t> rest(p_SpsNal.begin() + 2, p_SpsNal.end()); // skip 2-byte NAL header
-    RbspBitReader br(rest);
-
-    br.ReadBits(4);
-    uint64_t maxSubLayersMinus1 = br.ReadBits(3);
-    br.ReadBits(1);
-
-    info.profileSpace = static_cast<uint8_t>(br.ReadBits(2));
-    info.tierFlag = static_cast<uint8_t>(br.ReadBits(1));
-    info.profileIdc = static_cast<uint8_t>(br.ReadBits(5));
-    info.profileCompatFlags = static_cast<uint32_t>(br.ReadBits(32));
-    info.constraintFlags = br.ReadBits(48);
-    info.levelIdc = static_cast<uint8_t>(br.ReadBits(8));
-
-    std::vector<int> subProfilePresent, subLevelPresent;
-    for (uint64_t i = 0; i < maxSubLayersMinus1; ++i)
-    {
-        subProfilePresent.push_back(br.ReadBit());
-        subLevelPresent.push_back(br.ReadBit());
-    }
-    if (maxSubLayersMinus1 > 0)
-    {
-        for (uint64_t i = maxSubLayersMinus1; i < 8; ++i) br.ReadBits(2);
-    }
-    for (uint64_t i = 0; i < maxSubLayersMinus1; ++i)
-    {
-        if (subProfilePresent[i]) br.ReadBits(88);
-        if (subLevelPresent[i]) br.ReadBits(8);
-    }
-
-    br.ReadUE();
-    info.chromaFormatIdc = br.ReadUE();
-    if (info.chromaFormatIdc == 3) br.ReadBit();
-    br.ReadUE(); br.ReadUE();
-    if (br.ReadBit()) { br.ReadUE(); br.ReadUE(); br.ReadUE(); br.ReadUE(); }
-    info.bitDepthLumaMinus8 = br.ReadUE();
-    info.bitDepthChromaMinus8 = br.ReadUE();
-    return info;
+    if (p_Level > AV_LOG_WARNING) return;
+    char line[512];
+    int printPrefix = 1;
+    va_list copy;
+    va_copy(copy, p_Args);
+    av_log_format_line2(p_pAvcl, p_Level, p_pFmt, copy, line, sizeof(line), &printPrefix);
+    va_end(copy);
+    size_t n = strlen(line);
+    while (n > 0 && (line[n - 1] == '\n' || line[n - 1] == '\r')) line[--n] = 0;
+    if (n == 0) return;
+    g_Log(p_Level <= AV_LOG_ERROR ? logLevelError : logLevelWarn, "GDC Encoder :: libav: %s", line);
 }
 
-static std::vector<uint8_t> BuildHevcConfigRecord(const std::vector<std::vector<uint8_t>>& p_Nals)
+void GdcInstallAvLog()
 {
-    const std::vector<uint8_t>* pVps = nullptr;
-    const std::vector<uint8_t>* pSps = nullptr;
-    const std::vector<uint8_t>* pPps = nullptr;
-    for (auto& n : p_Nals)
-    {
-        int t = NalTypeH265(n);
-        if (t == 32 && !pVps) pVps = &n;
-        else if (t == 33 && !pSps) pSps = &n;
-        else if (t == 34 && !pPps) pPps = &n;
-    }
-    if (!pSps) return {};
-
-    H265SpsInfo s = ParseH265Sps(*pSps);
-
-    std::vector<uint8_t> out;
-    out.push_back(1);
-    out.push_back(static_cast<uint8_t>((s.profileSpace << 6) | (s.tierFlag << 5) | (s.profileIdc & 0x1F)));
-    for (int i = 3; i >= 0; --i) out.push_back(static_cast<uint8_t>((s.profileCompatFlags >> (i * 8)) & 0xFF));
-    for (int i = 5; i >= 0; --i) out.push_back(static_cast<uint8_t>((s.constraintFlags >> (i * 8)) & 0xFF));
-    out.push_back(s.levelIdc);
-    out.push_back(0xF0); out.push_back(0x00);
-    out.push_back(0xFC);
-    out.push_back(static_cast<uint8_t>(0xFC | (s.chromaFormatIdc & 0x03)));
-    out.push_back(static_cast<uint8_t>(0xF8 | (s.bitDepthLumaMinus8 & 0x07)));
-    out.push_back(static_cast<uint8_t>(0xF8 | (s.bitDepthChromaMinus8 & 0x07)));
-    out.push_back(0x00); out.push_back(0x00);
-    out.push_back(static_cast<uint8_t>((0 << 6) | (1 << 3) | (0 << 2) | 3));
-
-    struct ArrEntry { const std::vector<uint8_t>* nal; int type; };
-    std::vector<ArrEntry> arrays;
-    if (pVps) arrays.push_back({ pVps, 32 });
-    arrays.push_back({ pSps, 33 });
-    if (pPps) arrays.push_back({ pPps, 34 });
-
-    out.push_back(static_cast<uint8_t>(arrays.size()));
-    for (auto& a : arrays)
-    {
-        out.push_back(static_cast<uint8_t>((1 << 7) | (a.type & 0x3F)));
-        out.push_back(0x00); out.push_back(0x01);
-        out.push_back(static_cast<uint8_t>((a.nal->size() >> 8) & 0xFF));
-        out.push_back(static_cast<uint8_t>(a.nal->size() & 0xFF));
-        out.insert(out.end(), a.nal->begin(), a.nal->end());
-    }
-    return out;
+    static std::once_flag once;
+    std::call_once(once, []() { av_log_set_callback(GdcAvLogCallback); });
 }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Annex-B -> length-prefixed NAL conversion
-//
-// libx264/libx265 (and most FFmpeg H.264/H.265 encoders) emit Annex-B
-// bytestream packets: each NAL unit is preceded by a start code (00 00 01
-// or 00 00 00 01). MP4/MOV containers instead expect each NAL prefixed by
-// its own big-endian 4-byte length, with no start codes ("AVCC"/"HVCC"
-// format) — this is what Resolve's container writer expects from the
-// buffer this plugin hands it. Converting explicitly here (rather than
-// relying on a specific FFmpeg flag combination behaving a certain way)
-// keeps this correct regardless of encoder/version quirks.
-// ─────────────────────────────────────────────────────────────────────────
-static size_t ConvertAnnexBToLengthPrefixedRaw(const uint8_t* p_pData, int p_Size, uint8_t* p_pOut)
-{
-    size_t outPos = 0;
-    int i = 0;
-    while (i < p_Size - 3)
-    {
-        int startCodeLen = 0;
-        if (p_pData[i] == 0 && p_pData[i + 1] == 0 && p_pData[i + 2] == 1)
-        {
-            startCodeLen = 3;
-        }
-        else if ((i < p_Size - 4) && p_pData[i] == 0 && p_pData[i + 1] == 0 && p_pData[i + 2] == 0 && p_pData[i + 3] == 1)
-        {
-            startCodeLen = 4;
-        }
-        else
-        {
-            ++i;
-            continue;
-        }
-
-        int nalStart = i + startCodeLen;
-        int nalEnd = p_Size;
-        for (int j = nalStart; j < p_Size - 3; ++j)
-        {
-            if ((p_pData[j] == 0 && p_pData[j + 1] == 0 && p_pData[j + 2] == 1) ||
-                (j < p_Size - 4 && p_pData[j] == 0 && p_pData[j + 1] == 0 && p_pData[j + 2] == 0 && p_pData[j + 3] == 1))
-            {
-                nalEnd = j;
-                break;
-            }
-        }
-
-        int nalLen = nalEnd - nalStart;
-        if (nalLen > 0)
-        {
-            uint8_t lenBytes[4] = {
-                static_cast<uint8_t>((nalLen >> 24) & 0xFF),
-                static_cast<uint8_t>((nalLen >> 16) & 0xFF),
-                static_cast<uint8_t>((nalLen >> 8) & 0xFF),
-                static_cast<uint8_t>(nalLen & 0xFF),
-            };
-            if (p_pOut)
-            {
-                memcpy(p_pOut + outPos, lenBytes, 4);
-                memcpy(p_pOut + outPos + 4, p_pData + nalStart, static_cast<size_t>(nalLen));
-            }
-            outPos += 4 + static_cast<size_t>(nalLen);
-        }
-
-        i = nalEnd;
-    }
-    return outPos;
-}
-
-static void ConvertAnnexBToLengthPrefixed(const uint8_t* p_pData, int p_Size, std::vector<uint8_t>& p_Out)
-{
-    p_Out.resize(ConvertAnnexBToLengthPrefixedRaw(p_pData, p_Size, nullptr));
-    if (!p_Out.empty())
-    {
-        ConvertAnnexBToLengthPrefixedRaw(p_pData, p_Size, p_Out.data());
-    }
-}
-
-// Splits Annex-B extradata (SPS/PPS with start codes, as libx264/libx265
-// with AV_CODEC_FLAG_GLOBAL_HEADER produce) into a list of raw NALs, for
-// building an avcC/hvcC-style magic cookie.
-static void SplitAnnexBNALs(const uint8_t* p_pData, int p_Size, std::vector<std::vector<uint8_t>>& p_OutNals)
-{
-    std::vector<uint8_t> combined;
-    ConvertAnnexBToLengthPrefixed(p_pData, p_Size, combined);
-
-    size_t pos = 0;
-    while (pos + 4 <= combined.size())
-    {
-        int len = (combined[pos] << 24) | (combined[pos + 1] << 16) | (combined[pos + 2] << 8) | combined[pos + 3];
-        pos += 4;
-        if (pos + len > combined.size() || len <= 0)
-        {
-            break;
-        }
-        p_OutNals.emplace_back(combined.begin() + pos, combined.begin() + pos + len);
-        pos += len;
-    }
-}
-
+// The ISO/IEC 14496-15 avcC / hvcC builders and the Annex-B helpers live in
+// src/bitstream.h (shared with the GDC containers and the regression tests).
 
 // ─── HDR10 static metadata (mastering display + content light level) ───
 // Resolve 21.1 does NOT hand the hdrPrimaries/hdrWhite/hdrMasterLum/hdrMaxCLL/
@@ -329,6 +100,8 @@ FFmpegEncoder::FFmpegEncoder(const EncoderVariant* p_pVariant)
     , m_HdrMaxLum(1000)
     , m_HdrMaxCLL(0)
     , m_HdrMaxFALL(0)
+    , m_HwQuality(65)
+    , m_HwDtsDelay(0)
     , m_FrameCount(0)
     , m_PacketCount(0)
     , m_TotalBytesSent(0)
@@ -409,7 +182,13 @@ StatusCode FFmpegEncoder::s_RegisterCodecs(HostListRef* p_pList)
         std::vector<uint8_t> dataRangeVec = { 0, 1 }; // 0=video range (default), 1=full range also offered
         codecInfo.SetProperty(pIOPropDataRange, propTypeUInt8, dataRangeVec.data(), static_cast<int>(dataRangeVec.size()));
 
-        uint8_t hSampling = 2, vSampling = v.is422 ? 1 : 2; // 4:2:0 confirmed; 4:2:2 = full vertical chroma
+        // 10-bit 4:2:0: Resolve 21.2 does NOT deliver planar data for clrYUVp
+        // 4:2:0 at 16 bits per sample (host buffer is 3-way interleaved noise
+        // from the plane point of view; PSNR 14 dB vs the source, bitrate 5x).
+        // 8-bit 4:2:0 and 16-bit 4:2:2 are planar and verified, so 10-bit
+        // variants always request 4:2:2 planes and FillFrameFromBuffer halves
+        // the chroma height for the 4:2:0 encoders.
+        uint8_t hSampling = 2, vSampling = (v.is422 || v.bitDepth > 8) ? 1 : 2;
         codecInfo.SetProperty(pIOPropHSubsampling, propTypeUInt8, &hSampling, 1);
         codecInfo.SetProperty(pIOPropVSubsampling, propTypeUInt8, &vSampling, 1);
 
@@ -506,6 +285,8 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
     p_pValues->GetINT32("gdc_keyframe_interval", keyframeIntervalSec);
     p_pValues->GetINT32("gdc_level", level);
     p_pValues->GetString("gdc_advanced_params", advancedParams);
+    int32_t hwQuality = 65; // hardware constant-quality target (1-100)
+    p_pValues->GetINT32("gdc_hw_quality", hwQuality);
     int32_t hdr10Mode = 0;
     int32_t hdrPrimaries = 0;
     int32_t hdrMaxLum = 1000;
@@ -519,7 +300,7 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
 
     {
         HostUIConfigEntryRef brandItem("gdc_brand_label");
-        brandItem.MakeLabel("GDC Resolve Encoder — by Cristi Gordas");
+        brandItem.MakeLabel("GDC Resolve Encoder " GDC_ENCODER_VERSION " — Dumitru Cristinel Gordas (GDC)");
         if (!brandItem.IsSuccess() || !p_pSettingsList->Append(&brandItem))
         {
             return errFail;
@@ -531,39 +312,6 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         if (!sepItem.IsSuccess() || !p_pSettingsList->Append(&sepItem))
         {
             return errFail;
-        }
-    }
-
-    {
-        gdc_license::CheckResult activated = gdc_license::check_activated_license(kLicenseProductID, kLicensePublicKeyB64);
-        if (activated.valid)
-        {
-            HostUIConfigEntryRef licenseItem("gdc_license_status");
-            licenseItem.MakeLabel("Licenta: activa");
-            if (!licenseItem.IsSuccess() || !p_pSettingsList->Append(&licenseItem))
-            {
-                return errFail;
-            }
-        }
-        else
-        {
-            {
-                HostUIConfigEntryRef machineIdItem("gdc_machine_id");
-                std::string machineIdLabel = "ID masina (trimite-mi asta): " + gdc_license::get_machine_id_display();
-                machineIdItem.MakeLabel(machineIdLabel);
-                if (!machineIdItem.IsSuccess() || !p_pSettingsList->Append(&machineIdItem))
-                {
-                    return errFail;
-                }
-            }
-            std::string licenseCode;
-            p_pValues->GetString("gdc_license", licenseCode);
-            HostUIConfigEntryRef licenseItem("gdc_license");
-            licenseItem.MakeTextBox("Cod licenta", licenseCode, "");
-            if (!licenseItem.IsSuccess() || !p_pSettingsList->Append(&licenseItem))
-            {
-                return errFail;
-            }
         }
     }
 
@@ -638,43 +386,82 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         }
     }
 
+    if (pVariant->isHardware)
     {
-        HostUIConfigEntryRef modeItem("gdc_quality_mode");
-        std::vector<std::string> texts = { "Constant Quality (CRF)", "Target Bitrate", "Constant QP" };
-        std::vector<int32_t> values = { 0, 1, 2 };
-        modeItem.MakeRadioBox("Rate Control", texts, values, qualityMode);
-        modeItem.SetTriggersUpdate(true);
-        if (!modeItem.IsSuccess() || !p_pSettingsList->Append(&modeItem))
+        // Hardware (VideoToolbox / NVENC) has no CRF or constant-QP mode:
+        // offering those (as v1.7.0 did) silently encoded at a fixed
+        // 12 Mbps whatever the slider said. Two honest modes instead.
+        if (qualityMode != 0 && qualityMode != 1) qualityMode = 0;
         {
-            return errFail;
+            HostUIConfigEntryRef modeItem("gdc_quality_mode");
+            std::vector<std::string> texts = { "Constant Quality", "Target Bitrate" };
+            std::vector<int32_t> values = { 0, 1 };
+            modeItem.MakeRadioBox("Rate Control", texts, values, qualityMode);
+            modeItem.SetTriggersUpdate(true);
+            if (!modeItem.IsSuccess() || !p_pSettingsList->Append(&modeItem))
+            {
+                return errFail;
+            }
         }
-    }
-
-    if (qualityMode == 0)
-    {
-        HostUIConfigEntryRef crfItem("gdc_crf");
-        crfItem.MakeSlider("Quality (CRF)", "lower = better", crf, 0, 51, 23);
-        if (!crfItem.IsSuccess() || !p_pSettingsList->Append(&crfItem))
+        if (qualityMode == 0)
         {
-            return errFail;
+            HostUIConfigEntryRef qItem("gdc_hw_quality");
+            qItem.MakeSlider("Quality (1-100)", "higher = better", hwQuality, 1, 100, 65);
+            if (!qItem.IsSuccess() || !p_pSettingsList->Append(&qItem))
+            {
+                return errFail;
+            }
         }
-    }
-    else if (qualityMode == 1)
-    {
-        HostUIConfigEntryRef brItem("gdc_bitrate");
-        brItem.MakeSlider("Bit Rate", "kbps", bitRateKbps, 500, 100000, 8000, 100);
-        if (!brItem.IsSuccess() || !p_pSettingsList->Append(&brItem))
+        else
         {
-            return errFail;
+            HostUIConfigEntryRef brItem("gdc_bitrate");
+            brItem.MakeSlider("Bit Rate", "kbps", bitRateKbps, 500, 100000, 8000, 100);
+            if (!brItem.IsSuccess() || !p_pSettingsList->Append(&brItem))
+            {
+                return errFail;
+            }
         }
     }
     else
     {
-        HostUIConfigEntryRef qpItem("gdc_qp");
-        qpItem.MakeSlider("Constant QP", "lower = better", qp, 0, 51, 23);
-        if (!qpItem.IsSuccess() || !p_pSettingsList->Append(&qpItem))
         {
-            return errFail;
+            HostUIConfigEntryRef modeItem("gdc_quality_mode");
+            std::vector<std::string> texts = { "Constant Quality (CRF)", "Target Bitrate", "Constant QP" };
+            std::vector<int32_t> values = { 0, 1, 2 };
+            modeItem.MakeRadioBox("Rate Control", texts, values, qualityMode);
+            modeItem.SetTriggersUpdate(true);
+            if (!modeItem.IsSuccess() || !p_pSettingsList->Append(&modeItem))
+            {
+                return errFail;
+            }
+        }
+
+        if (qualityMode == 0)
+        {
+            HostUIConfigEntryRef crfItem("gdc_crf");
+            crfItem.MakeSlider("Quality (CRF)", "lower = better", crf, 0, 51, 23);
+            if (!crfItem.IsSuccess() || !p_pSettingsList->Append(&crfItem))
+            {
+                return errFail;
+            }
+        }
+        else if (qualityMode == 1)
+        {
+            HostUIConfigEntryRef brItem("gdc_bitrate");
+            brItem.MakeSlider("Bit Rate", "kbps", bitRateKbps, 500, 100000, 8000, 100);
+            if (!brItem.IsSuccess() || !p_pSettingsList->Append(&brItem))
+            {
+                return errFail;
+            }
+        }
+        else
+        {
+            HostUIConfigEntryRef qpItem("gdc_qp");
+            qpItem.MakeSlider("Constant QP", "lower = better", qp, 0, 51, 23);
+            if (!qpItem.IsSuccess() || !p_pSettingsList->Append(&qpItem))
+            {
+                return errFail;
+            }
         }
     }
 
@@ -821,6 +608,8 @@ StatusCode FFmpegEncoder::FlushOneStep()
     if (sts != errNone)
     {
         g_Log(logLevelError, "GDC Encoder :: SendPacketToHost FAILED during flush (err=%d)", static_cast<int>(sts));
+        ++g_GdcEncoderFailureCount;
+        m_Error = sts;
         return sts;
     }
 
@@ -846,41 +635,8 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     g_Log(logLevelInfo, "GDC Encoder :: DoOpen called (variant='%s')", m_pVariant ? m_pVariant->displayName : "NULL");
     m_CommonProps.Load(p_pBuff);
 
-    gdc_license::CheckResult licenseResult = gdc_license::check_activated_license(kLicenseProductID, kLicensePublicKeyB64);
-    if (!licenseResult.valid)
-    {
-        // nicio licenta activata local inca - verificam ce a introdus
-        // utilizatorul in campul de text si, daca e valid, o salvam
-        // local pentru viitor (dupa asta, campul dispare din panou —
-        // vezi s_GetEncoderSettings — si codul brut nu mai e vizibil)
-        std::string licenseCode;
-        p_pBuff->GetString("gdc_license", licenseCode);
-        licenseResult = gdc_license::check_serial(licenseCode, kLicensePublicKeyB64, kLicenseProductID);
-        if (licenseResult.valid)
-        {
-            // Randarea curenta merge oricum (licenseResult.valid e deja
-            // true din check_serial de mai sus), dar daca scrierea pe
-            // disc esueaza (permisiuni, disc plin), utilizatorului i se
-            // va cere codul din nou la fiecare pornire a Resolve, fara
-            // niciun indiciu de ce — logam explicit ca sa fie clar ce
-            // s-a intamplat, in loc sa pretindem mereu succes.
-            if (gdc_license::save_activated_license(kLicenseProductID, licenseCode))
-            {
-                g_Log(logLevelInfo, "GDC Encoder :: Licenta noua, activata si salvata local.");
-            }
-            else
-            {
-                g_Log(logLevelWarn, "GDC Encoder :: Licenta valida pentru aceasta randare, dar salvarea locala a esuat (%s) — codul va fi cerut din nou la urmatoarea pornire.",
-                      gdc_license::activation_file_path(kLicenseProductID).c_str());
-            }
-        }
-    }
-    if (!licenseResult.valid)
-    {
-        g_Log(logLevelError, "GDC Encoder :: Licenta invalida sau lipsa: %s", licenseResult.error.c_str());
-        return errFail;
-    }
-    g_Log(logLevelInfo, "GDC Encoder :: Licenta valida.");
+    GdcInstallAvLog();
+    g_Log(logLevelInfo, "GDC Encoder :: version " GDC_ENCODER_VERSION ", libavcodec %s", av_version_info());
 
     p_pBuff->GetINT32("gdc_quality_mode", m_QualityMode);
     p_pBuff->GetINT32("gdc_crf", m_CRF);
@@ -897,8 +653,11 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     p_pBuff->GetINT32("gdc_hdr_maxlum", m_HdrMaxLum);
     p_pBuff->GetINT32("gdc_hdr_maxcll", m_HdrMaxCLL);
     p_pBuff->GetINT32("gdc_hdr_maxfall", m_HdrMaxFALL);
+    p_pBuff->GetINT32("gdc_hw_quality", m_HwQuality);
 
-    return OpenCodec(p_pBuff);
+    const StatusCode openSts = OpenCodec(p_pBuff);
+    if (openSts != errNone) ++g_GdcEncoderFailureCount;
+    return openSts;
 }
 
 StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
@@ -1105,13 +864,40 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     }
     else
     {
-        // Hardware encoders (VideoToolbox/NVENC): CRF isn't universally
-        // supported the same way — fall back to a quality-oriented bitrate
-        // if the person picked CRF mode, since a 0 bit_rate would leave
-        // the hardware encoder without any rate target.
-        if (m_QualityMode == 0 && m_pCtx->bit_rate == 0)
+        // Hardware encoders. "Constant Quality" maps to the encoder's own
+        // quality scale: VideoToolbox takes global_quality 1-100 with the
+        // QSCALE flag (kVTCompressionPropertyKey_Quality, Apple Silicon);
+        // NVENC has no such scale here, so it keeps a bitrate target.
+        const bool isVT = (strstr(m_pVariant->avCodecName, "videotoolbox") != nullptr);
+        if (m_QualityMode != 1)
         {
-            m_pCtx->bit_rate = 12000000; // 12 Mbps sensible default
+            int q = m_HwQuality;
+            if (q < 1) q = 1;
+            if (q > 100) q = 100;
+            if (isVT)
+            {
+                m_pCtx->flags |= AV_CODEC_FLAG_QSCALE;
+                m_pCtx->global_quality = q * FF_QP2LAMBDA;
+                m_pCtx->bit_rate = 0;
+                g_Log(logLevelInfo, "GDC Encoder :: hardware rate control: constant quality %d/100", q);
+            }
+            else
+            {
+                m_pCtx->bit_rate = 12000000;
+                g_Log(logLevelWarn, "GDC Encoder :: hardware rate control: constant quality not available for '%s', using 12 Mbps", m_pVariant->avCodecName);
+            }
+        }
+        else
+        {
+            g_Log(logLevelInfo, "GDC Encoder :: hardware rate control: target bitrate %d kbps", static_cast<int>(m_BitRateKbps));
+        }
+        if (isVT)
+        {
+            // Never fall back silently to Apple's software encoder: a
+            // "hardware" variant that quietly ran in software would be a
+            // different product than the one selected in Deliver.
+            av_dict_set(&pOpts, "allow_sw", "0", 0);
+            av_dict_set(&pOpts, "realtime", "0", 0);
         }
     }
 
@@ -1159,6 +945,16 @@ StatusCode FFmpegEncoder::OpenCodec(HostBufferRef* p_pBuff)
     // validated for it, and "encode completes with zero errors but no
     // video ends up in the file" is consistent with Resolve's writer
     // needing real hvcC structure it can't get from a raw concatenation.
+    if (strstr(m_pVariant->avCodecName, "videotoolbox") != nullptr && m_pCtx->max_b_frames > 0 && m_pCtx->has_b_frames > 0)
+    {
+        m_HwDtsDelay = std::max(m_pCtx->has_b_frames, m_pCtx->max_b_frames);
+    }
+    g_Log(logLevelInfo, "GDC Encoder :: encoder '%s' opened: pix_fmt=%s threads=%d gop=%d b-frames=%d reorder delay=%d (synthesised dts delay=%d)",
+          m_pVariant->avCodecName, av_get_pix_fmt_name(m_pCtx->pix_fmt), m_pCtx->thread_count, m_pCtx->gop_size,
+          m_pCtx->max_b_frames, m_pCtx->has_b_frames, m_HwDtsDelay);
+    g_Log(logLevelInfo, "GDC Encoder :: rate control: mode=%d (0=CRF 1=bitrate 2=QP) crf=%d qp=%d bitrate=%dkbps hwQuality=%d preset=%d tune=%d level=%d",
+          m_QualityMode, m_CRF, m_QP, m_BitRateKbps, m_HwQuality, m_Preset, m_Tune, m_Level);
+
     if (m_pCtx->extradata && m_pCtx->extradata_size > 0)
     {
         std::vector<std::vector<uint8_t>> nals;
@@ -1254,6 +1050,18 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     uint32_t width = m_pCtx->width;
     uint32_t height = m_pCtx->height;
 
+    if (m_FrameCount == 0)
+    {
+        g_Log(logLevelInfo, "GDC Encoder :: first host frame buffer: %zu bytes for %ux%u (variant %d-bit%s)",
+              bufSize, width, height, m_pVariant->bitDepth, m_pVariant->is422 ? " 4:2:2" : " 4:2:0");
+#ifdef GDC_DEBUG_DUMP_DIR
+        {
+            std::string dumpPath = std::string(GDC_DEBUG_DUMP_DIR) + "/host_frame0_" + std::to_string(m_pVariant->bitDepth) + (m_pVariant->is422 ? "_422" : "_420") + ".raw";
+            if (FILE* fp = fopen(dumpPath.c_str(), "wb")) { fwrite(pBuf, 1, bufSize, fp); fclose(fp); }
+        }
+#endif
+    }
+
     // 4:2:0 chroma planes are (w/2)x(h/2) below: odd dimensions would read
     // past the tightly packed source layout. Refuse instead of corrupting.
     if ((width & 1u) || (!m_pVariant->is422 && (height & 1u)))
@@ -1272,20 +1080,26 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
         return errAlloc;
     }
 
-    // Resolve delivers planar YUV 4:2:0 (Y plane, then U plane, then V
-    // plane, tightly packed) matching pIOPropColorModel=clrYUVp + 2/2
-    // subsampling declared in s_RegisterCodecs. For 10-bit variants, each
-    // sample is a 16-bit little-endian container (10 meaningful bits) —
-    // same plane layout, just double the bytes per sample, matching
-    // AV_PIX_FMT_YUV420P10LE. When the target encoder wants exactly this
-    // source layout, no conversion is needed at all; otherwise (hardware
-    // encoders wanting NV12, etc.) go through swscale.
+    // 8-bit: planar YUV 4:2:0 (Y, U, V tightly packed), matching
+    // pIOPropColorModel=clrYUVp + 2/2 subsampling. 10-bit: the host sends
+    // planar 4:2:2 with 16-bit little-endian samples (10 meaningful bits),
+    // see s_RegisterCodecs for why 4:2:0 is not requested at 16 bits.
     const bool is10Bit = (m_pVariant->bitDepth == 10);
-    const bool is422 = m_pVariant->is422;
-    const AVPixelFormat srcFmt = is10Bit ? (is422 ? AV_PIX_FMT_YUV422P16LE : AV_PIX_FMT_YUV420P16LE)
-                                         : (is422 ? AV_PIX_FMT_YUV422P : AV_PIX_FMT_YUV420P); // host 10-bit = 16-bit container (value<<6)
-    const size_t chromaH = is422 ? height : (height / 2);
+    const bool is422 = m_pVariant->is422;            // what the ENCODER wants
+    const bool hostIs422 = is422 || is10Bit;         // what the HOST delivers
+    const AVPixelFormat srcFmt = is10Bit ? AV_PIX_FMT_YUV422P16LE
+                                         : (is422 ? AV_PIX_FMT_YUV422P : AV_PIX_FMT_YUV420P);
+    const size_t chromaH = hostIs422 ? height : (height / 2);
     const int bytesPerSample = is10Bit ? 2 : 1;
+
+    const size_t wantBytes = gdc::HostPlanarFrameBytes(static_cast<int>(width), static_cast<int>(height), hostIs422, bytesPerSample);
+    if (bufSize < wantBytes)
+    {
+        g_Log(logLevelError, "GDC Encoder :: host frame buffer too small: %zu bytes, expected %zu for %ux%u %d-bit %s planar",
+              bufSize, wantBytes, width, height, m_pVariant->bitDepth, hostIs422 ? "4:2:2" : "4:2:0");
+        p_pBuff->UnlockBuffer();
+        return errFail;
+    }
 
     const uint8_t* pSrcData[4] = {};
     int srcLinesize[4] = {};
@@ -1296,25 +1110,23 @@ StatusCode FFmpegEncoder::FillFrameFromBuffer(HostBufferRef* p_pBuff, AVFrame* p
     pSrcData[2] = pSrcData[1] + ((static_cast<size_t>(width) / 2) * chromaH * bytesPerSample);
     srcLinesize[2] = (static_cast<int>(width) / 2) * bytesPerSample;
 
-    if (is10Bit && static_cast<AVPixelFormat>(p_pFrame->format) == (is422 ? AV_PIX_FMT_YUV422P10LE : AV_PIX_FMT_YUV420P10LE))
+    if (is10Bit && (static_cast<AVPixelFormat>(p_pFrame->format) == AV_PIX_FMT_YUV422P10LE ||
+                    static_cast<AVPixelFormat>(p_pFrame->format) == AV_PIX_FMT_YUV420P10LE))
     {
-        // Verified in Resolve 21.1 (first-frame diagnostic: Y max=57155):
-        // the host delivers 10-bit as FULL 16-bit samples (value << 6), not
-        // low-aligned 10-bit. Convert 16 -> 10 bit with rounding, clamped.
-        for (int plane = 0; plane < 3; ++plane)
+        // 16 -> 10 bit with rounding, clamped (host samples are value << 6).
+        const int cw = static_cast<int>(width) / 2;
+        const auto* sY = reinterpret_cast<const uint16_t*>(pSrcData[0]);
+        gdc::Plane16To10(sY, width, reinterpret_cast<uint16_t*>(p_pFrame->data[0]),
+                         static_cast<size_t>(p_pFrame->linesize[0]) / 2, static_cast<int>(width), static_cast<int>(height));
+        for (int plane = 1; plane < 3; ++plane)
         {
-            const int pw = plane ? static_cast<int>(width) / 2 : static_cast<int>(width);
-            const int ph = plane ? static_cast<int>(chromaH) : static_cast<int>(height);
-            for (int y = 0; y < ph; ++y)
-            {
-                const uint16_t* pS = reinterpret_cast<const uint16_t*>(pSrcData[plane] + static_cast<size_t>(y) * srcLinesize[plane]);
-                uint16_t* pD = reinterpret_cast<uint16_t*>(p_pFrame->data[plane] + static_cast<size_t>(y) * p_pFrame->linesize[plane]);
-                for (int x = 0; x < pw; ++x)
-                {
-                    const uint32_t v = (static_cast<uint32_t>(pS[x]) + 32u) >> 6;
-                    pD[x] = static_cast<uint16_t>(v > 1023u ? 1023u : v);
-                }
-            }
+            const auto* sC = reinterpret_cast<const uint16_t*>(pSrcData[plane]);
+            auto* dC = reinterpret_cast<uint16_t*>(p_pFrame->data[plane]);
+            const size_t dStride = static_cast<size_t>(p_pFrame->linesize[plane]) / 2;
+            if (is422)
+                gdc::Plane16To10(sC, static_cast<size_t>(cw), dC, dStride, cw, static_cast<int>(height));
+            else
+                gdc::Chroma422To420_16To10(sC, static_cast<size_t>(cw), dC, dStride, cw, static_cast<int>(height));
         }
     }
     else if (static_cast<AVPixelFormat>(p_pFrame->format) == srcFmt)
@@ -1387,10 +1199,20 @@ StatusCode FFmpegEncoder::DoProcess(HostBufferRef* p_pBuff)
     if (sts != errNone)
     {
         g_Log(logLevelError, "GDC Encoder :: FillFrameFromBuffer FAILED (err=%d) at frame %d", static_cast<int>(sts), static_cast<int>(m_FrameCount));
+        ++g_GdcEncoderFailureCount;
+        m_Error = sts;
         return sts;
     }
 
-    return EncodeFrame(m_pFrame);
+    sts = EncodeFrame(m_pFrame);
+    if (sts != errNone)
+    {
+        // Latch the error: every later call fails too, and the GDC
+        // container removes the partial file instead of finalising it.
+        ++g_GdcEncoderFailureCount;
+        m_Error = sts;
+    }
+    return sts;
 }
 
 StatusCode FFmpegEncoder::EncodeFrame(AVFrame* p_pFrame)
@@ -1481,6 +1303,20 @@ StatusCode FFmpegEncoder::SendPacketToHost(AVPacket* p_pPkt)
     int64_t pts = p_pPkt->pts;
     outBuf.SetProperty(pIOPropPTS, propTypeInt64, &pts, 1);
     int64_t dts = p_pPkt->dts;
+    if (m_HwDtsDelay > 0)
+    {
+        // h264_videotoolbox shifts DTS by one frame while its B-pyramid
+        // needs two (measured: pts=1 dts=2 on the 4th packet), which every
+        // ISO-BMFF/Matroska muxer rejects (dts > pts). Packets leave the
+        // encoder in decode order, so DTS = decode index - delay.
+        dts = (m_PacketCount - 1) - m_HwDtsDelay;
+    }
+    if (dts > pts)
+    {
+        g_Log(logLevelError, "GDC Encoder :: packet #%d has dts %lld > pts %lld — refusing to hand an invalid timestamp to the container",
+              static_cast<int>(m_PacketCount), static_cast<long long>(dts), static_cast<long long>(pts));
+        return errFail;
+    }
     outBuf.SetProperty(pIOPropDTS, propTypeInt64, &dts, 1);
 
     uint8_t isKeyFrame = (p_pPkt->flags & AV_PKT_FLAG_KEY) ? 1 : 0;

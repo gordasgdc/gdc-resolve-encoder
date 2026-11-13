@@ -1,79 +1,34 @@
-# Licențe terțe (Third-Party Licenses)
+# Third-party components / Componente terțe
 
-**Notă**: Acest document oferă informații factuale despre librăriile folosite și
-licențele lor. Nu constituie consultanță juridică. Pentru certitudine legală
-deplină (în special pentru distribuție comercială), consultă un avocat
-specializat în proprietate intelectuală / licențe open-source.
+**GDC Resolve Encoder** — Copyright (c) 2026 Dumitru Cristinel Gordas (GDC).
+The plugin's own source code (everything in `src/`, `wrapper/`, `tests/`, `scripts/`, the installers
+and documentation) is released under the **MIT License** (`LICENSE`).
 
-This document provides factual information about the libraries used and their
-licenses. It is not legal advice. For full legal certainty (especially for
-commercial distribution), consult a lawyer specialized in open-source
-licensing.
+The **macOS package** (`.pkg` / bundle) additionally contains the libraries below, copied unchanged from
+Homebrew into `Contents/Frameworks/`. Because the bundled FFmpeg is built with `--enable-gpl --enable-version3`
+and links libx264 and libx265 (both GPL-2.0-or-later), **the macOS package as a whole is distributed under the
+terms of the GNU General Public License version 3 (GPL-3.0-or-later)**. MIT code is compatible with that.
+The Windows build uses its own FFmpeg build (see `.github/workflows/build.yml`) and its own notices.
 
----
+| Library | Version in the package | Licence | Upstream |
+|---|---|---|---|
+| FFmpeg (libavformat, libavcodec, libavutil, libswscale, libswresample) | 9.0.2 | GPL-3.0-or-later (configured `--enable-gpl --enable-version3`) | https://ffmpeg.org/ |
+| x264 | r3222 (b35605a) | GPL-2.0-or-later | https://www.videolan.org/developers/x264.html |
+| x265 | 4.3 | GPL-2.0-or-later | https://bitbucket.org/multicoreware/x265_git |
+| libvpx | 1.17.0 | BSD-3-Clause | https://www.webmproject.org/code/ |
+| dav1d | 1.5.4 | BSD-2-Clause | https://code.videolan.org/videolan/dav1d |
+| SVT-AV1 | 4.2.0 | BSD-3-Clause (+ AOM patent licence) | https://gitlab.com/AOMediaCodec/SVT-AV1 |
+| Opus | 1.6.1 | BSD-3-Clause | https://opus-codec.org/ |
+| LAME (libmp3lame) | 4.0 | LGPL-2.0-or-later | https://lame.sourceforge.io/ |
+| mpg123 | 1.33.7 | LGPL-2.1-only | https://www.mpg123.de/ |
+| liblzma (xz) | 5.8.4 | 0BSD | https://tukaani.org/xz/ |
+| OpenSSL (libssl, libcrypto) | 3.6.4 | Apache-2.0 | https://openssl-library.org/ |
 
-## Rezumat / Summary
+Full licence texts: `legal/texts/` in this repository and, in the installed bundle,
+`Contents/Resources/Licenses/`. Exact upstream source archives and how to obtain them: `legal/SOURCES.md`.
 
-`gdc_resolve_encoder` (codul propriu-zis al acestui plugin) este licențiat
-sub **MIT License** — vezi `LICENSE` din acest repository.
+Patents: H.264/AVC and H.265/HEVC (and other formats) may be covered by patents in some countries.
+This software is provided without any patent licence; users are responsible for their own use.
 
-Însă, **binarul compilat leagă (links) librării GPL** (`libx264`, `libx265`).
-Conform termenilor GPL (General Public License), orice binar compilat care
-leagă cod GPL devine, ca *distribuție compilată*, supus condițiilor GPL —
-indiferent de licența codului propriu adăugat pe deasupra. Codul sursă al
-acestui plugin rămâne MIT; **binarul livrat este, practic, o lucrare derivată
-GPL** din cauza legăturii cu libx264/libx265.
-
-**Ce înseamnă asta practic:**
-- Poți folosi acest plugin liber, personal sau comercial (rendering intern).
-- Dacă redistribui binarul (îl dai altcuiva, îl vinzi, îl incluzi într-un alt
-  produs), ești obligat să respecți termenii GPL v2+ pentru acea distribuție
-  — cel mai relevant, să pui la dispoziție codul sursă complet (al tău +
-  libx264/libx265, care sunt deja publice) și să păstrezi aceeași licență
-  GPL pentru distribuția respectivă.
-- Nu poți vinde acest plugin ca produs "closed source" fără să respecți GPL.
-
----
-
-## Librăriile folosite
-
-### FFmpeg (libavcodec, libavutil, libswscale)
-- **Website**: https://ffmpeg.org
-- **Licență**: LGPL v2.1+ sau GPL v2+, în funcție de configurația de build.
-  Build-urile folosite de acest proiect (care includ libx264/libx265) sunt
-  configurate cu `--enable-gpl`, deci intră sub **GPL v2+**.
-- **Copyright**: © FFmpeg contributors
-- **Sursă**: https://github.com/FFmpeg/FFmpeg
-- **Text licență**: https://ffmpeg.org/legal.html
-
-### libx264
-- **Website**: https://www.videolan.org/developers/x264.html
-- **Licență**: **GPL v2+**. Există și o licență comercială disponibilă de la
-  autori, pentru cine dorește să evite obligațiile GPL în distribuție.
-- **Copyright**: © x264 project contributors
-- **Sursă**: https://code.videolan.org/videolan/x264
-
-### libx265
-- **Website**: https://www.videolan.org/developers/x265.html
-- **Licență**: **GPL v2**. Licență comercială disponibilă de la MulticoreWare
-  Inc. pentru cine dorește să evite obligațiile GPL.
-- **Copyright**: © MulticoreWare Inc. și contribuitori
-- **Sursă**: https://bitbucket.org/multicoreware/x265_git
-
-### Blackmagic Design IOPlugin SDK
-- **Licență**: proprietară Blackmagic Design, inclusă cu DaVinci Resolve
-  Developer SDK. Fișierele SDK neschimbate din acest repository
-  (`include/`, structura de bază din `wrapper/`) rămân proprietatea
-  Blackmagic Design și sunt incluse conform termenilor lor de distribuție
-  pentru dezvoltatori de plugin-uri.
-
----
-
-## Recomandare
-
-Dacă la un moment dat vrei să distribui acest plugin comercial, la scară
-mare, sau ca parte dintr-un produs plătit închis (closed-source), varianta
-cea mai sigură din punct de vedere legal e să obții licențe comerciale
-pentru libx264 și libx265 (de la x264/x265 respectiv MulticoreWare), care
-te scutesc de obligațiile de redistribuire GPL. Pentru uz personal, freeware,
-sau proiecte deschise, GPL nu ridică probleme — doar trebuie respectat.
+This project is independent and is not affiliated with, endorsed by or sponsored by Blackmagic Design.
+"DaVinci Resolve" is a trademark of Blackmagic Design Pty Ltd.
