@@ -1,6 +1,5 @@
 #include <algorithm>
 #include "ffmpeg_encoder.h"
-#include "license_check.h"
 #include "gdc_container.h"
 
 #include <cstring>
@@ -18,12 +17,7 @@ extern "C" {
 static int NalTypeH264(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty() ? -1 : (p_Nal[0] & 0x1F); }
 static int NalTypeH265(const std::vector<uint8_t>& p_Nal) { return p_Nal.empty() ? -1 : ((p_Nal[0] >> 1) & 0x3F); }
 
-// ─────────────────────────────────────────────────────────────────────────
-// Licentiere — INLOCUIESTE cu cheia TA publica, generata de keygen.py
-// (gdc-license-system). Valoarea de mai jos e doar un exemplu si NU va
-// valida niciun cod real generat cu cheia ta privata.
-static const std::string kLicensePublicKeyB64 = "I1h23MNMRbOhc0ObKJrfa3oFHKA9w+SzbNrroAIy8hs=";
-static const std::string kLicenseProductID = "gdc-resolve-encoder";
+static const char* kPluginVersion = "1.7.1";
 
 // ─────────────────────────────────────────────────────────────────────────
 // Proper ISO/IEC 14496-15 hvcC construction for H.265 only.
@@ -519,7 +513,7 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
 
     {
         HostUIConfigEntryRef brandItem("gdc_brand_label");
-        brandItem.MakeLabel("GDC Resolve Encoder — by Cristi Gordas");
+        brandItem.MakeLabel(std::string("GDC Resolve Encoder ") + kPluginVersion + " — Dumitru Cristinel Gordas (GDC)");
         if (!brandItem.IsSuccess() || !p_pSettingsList->Append(&brandItem))
         {
             return errFail;
@@ -531,39 +525,6 @@ StatusCode FFmpegEncoder::s_GetEncoderSettings(unsigned char* p_pUUID, HostPrope
         if (!sepItem.IsSuccess() || !p_pSettingsList->Append(&sepItem))
         {
             return errFail;
-        }
-    }
-
-    {
-        gdc_license::CheckResult activated = gdc_license::check_activated_license(kLicenseProductID, kLicensePublicKeyB64);
-        if (activated.valid)
-        {
-            HostUIConfigEntryRef licenseItem("gdc_license_status");
-            licenseItem.MakeLabel("Licenta: activa");
-            if (!licenseItem.IsSuccess() || !p_pSettingsList->Append(&licenseItem))
-            {
-                return errFail;
-            }
-        }
-        else
-        {
-            {
-                HostUIConfigEntryRef machineIdItem("gdc_machine_id");
-                std::string machineIdLabel = "ID masina (trimite-mi asta): " + gdc_license::get_machine_id_display();
-                machineIdItem.MakeLabel(machineIdLabel);
-                if (!machineIdItem.IsSuccess() || !p_pSettingsList->Append(&machineIdItem))
-                {
-                    return errFail;
-                }
-            }
-            std::string licenseCode;
-            p_pValues->GetString("gdc_license", licenseCode);
-            HostUIConfigEntryRef licenseItem("gdc_license");
-            licenseItem.MakeTextBox("Cod licenta", licenseCode, "");
-            if (!licenseItem.IsSuccess() || !p_pSettingsList->Append(&licenseItem))
-            {
-                return errFail;
-            }
         }
     }
 
@@ -846,41 +807,7 @@ StatusCode FFmpegEncoder::DoOpen(HostBufferRef* p_pBuff)
     g_Log(logLevelInfo, "GDC Encoder :: DoOpen called (variant='%s')", m_pVariant ? m_pVariant->displayName : "NULL");
     m_CommonProps.Load(p_pBuff);
 
-    gdc_license::CheckResult licenseResult = gdc_license::check_activated_license(kLicenseProductID, kLicensePublicKeyB64);
-    if (!licenseResult.valid)
-    {
-        // nicio licenta activata local inca - verificam ce a introdus
-        // utilizatorul in campul de text si, daca e valid, o salvam
-        // local pentru viitor (dupa asta, campul dispare din panou —
-        // vezi s_GetEncoderSettings — si codul brut nu mai e vizibil)
-        std::string licenseCode;
-        p_pBuff->GetString("gdc_license", licenseCode);
-        licenseResult = gdc_license::check_serial(licenseCode, kLicensePublicKeyB64, kLicenseProductID);
-        if (licenseResult.valid)
-        {
-            // Randarea curenta merge oricum (licenseResult.valid e deja
-            // true din check_serial de mai sus), dar daca scrierea pe
-            // disc esueaza (permisiuni, disc plin), utilizatorului i se
-            // va cere codul din nou la fiecare pornire a Resolve, fara
-            // niciun indiciu de ce — logam explicit ca sa fie clar ce
-            // s-a intamplat, in loc sa pretindem mereu succes.
-            if (gdc_license::save_activated_license(kLicenseProductID, licenseCode))
-            {
-                g_Log(logLevelInfo, "GDC Encoder :: Licenta noua, activata si salvata local.");
-            }
-            else
-            {
-                g_Log(logLevelWarn, "GDC Encoder :: Licenta valida pentru aceasta randare, dar salvarea locala a esuat (%s) — codul va fi cerut din nou la urmatoarea pornire.",
-                      gdc_license::activation_file_path(kLicenseProductID).c_str());
-            }
-        }
-    }
-    if (!licenseResult.valid)
-    {
-        g_Log(logLevelError, "GDC Encoder :: Licenta invalida sau lipsa: %s", licenseResult.error.c_str());
-        return errFail;
-    }
-    g_Log(logLevelInfo, "GDC Encoder :: Licenta valida.");
+    g_Log(logLevelInfo, "GDC Encoder :: version %s (Windows maintenance build, no activation required)", kPluginVersion);
 
     p_pBuff->GetINT32("gdc_quality_mode", m_QualityMode);
     p_pBuff->GetINT32("gdc_crf", m_CRF);

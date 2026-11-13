@@ -7,6 +7,9 @@ Native, open-source encoder for DaVinci Resolve Studio — H.264 and H.265 via F
 
 > Requires **DaVinci Resolve Studio** — the free edition doesn't support IOPlugins.
 
+> **Windows edition 1.7.1 (maintenance): free, with no activation, account, trial or mandatory donation, and no server calls.** It starts from v1.7.0 with the licence code removed; development of new Windows features is suspended and contributions are welcome. Status of the DaVinci Resolve test on Windows: see https://gordas.dev/gdc-resolve-encoder/en/ . Any text below about licensing/activation refers to earlier versions.
+
+
 ## Full guide, in 3 languages
 
 Every archive in [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) includes a complete PDF guide (installation, every setting explained with examples, practical recipes, troubleshooting, licensing), in Romanian, English, and Spanish. Also available directly in [`docs/guides/`](docs/guides/).

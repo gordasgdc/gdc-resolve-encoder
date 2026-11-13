@@ -5,6 +5,15 @@ Jurnal scurt, orientat spre utilizator, al schimbărilor livrate clienților
 din CLAUDE.md (acolo sunt și deciziile/motivele/pitfall-urile; aici doar
 rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 
+## v1.7.1 (Windows, ediție de întreținere) — Gratuit, fără activare
+
+- **Fără activare**: pluginul nu mai cere cod de licență, Machine ID, cont, perioadă de probă sau donație și nu contactează niciun server. Instalezi și exporți.
+- Funcțiile sunt cele din v1.7.0 (formatele GDC QuickTime / MP4 / Matroska, H.264 și H.265, 10-bit, 4:2:2, HDR10); nu s-au adăugat funcții noi.
+- Pachetul Windows include acum textele de licență și indicațiile pentru codul sursă (FFmpeg 9.0.2, build gyan.dev, fixat), în loc de ghidurile PDF vechi, care descriau activarea; instrucțiunile scurte sunt în `README_WINDOWS.txt` (RO/EN/ES).
+- Versiunea apare în panoul plugin-ului și în jurnalul Resolve.
+- **Stare**: construit din sursele v1.7.0. Încărcarea și exportul în DaVinci Resolve Studio pe Windows așteaptă încă o probă pe un sistem Windows; dezvoltarea pentru Windows este suspendată, contribuțiile sunt binevenite.
+- Probleme cunoscute ale v1.7.0, constatate pe macOS și corectate doar în ediția macOS 1.8.0 (neverificate pe Windows): exporturile H.264 software în formatele GDC și 10-bit 4:2:0 pe Resolve 21.2.
+
 ## v1.7.0 (2026-09-21) — Formate proprii: GDC QuickTime, GDC MP4, GDC Matroska (cu HDR în fișier)
 
 - **Trei formate noi în lista Format din Deliver**: `GDC QuickTime`, `GDC MP4` și `GDC Matroska`. Nu mai trebuie să alegi întâi QuickTime și apoi codecul: alegi formatul GDC și codecul GDC direct, cu setările plugin-ului (inclusiv HDR10) imediat dedesubt.

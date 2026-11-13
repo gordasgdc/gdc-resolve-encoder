@@ -7,6 +7,9 @@ Codificador nativo y de código abierto para DaVinci Resolve Studio — H.264 y 
 
 > Requiere **DaVinci Resolve Studio** — la edición gratuita no soporta IOPlugins.
 
+> **Edición Windows 1.7.1 (mantenimiento): gratuita, sin activación, cuenta, prueba ni donación obligatoria, y sin llamadas a servidores.** Parte de v1.7.0 sin el código de licencia; el desarrollo de nuevas funciones para Windows está suspendido y se agradecen las contribuciones. Estado de la prueba en DaVinci Resolve en Windows: véase https://gordas.dev/gdc-resolve-encoder/es/ . Lo que se dice más abajo sobre licencia/activación se refiere a versiones anteriores.
+
+
 ## Guía completa, en 3 idiomas
 
 Cada archivo en [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) incluye una guía PDF completa (instalación, cada ajuste explicado con ejemplos, recetas prácticas, solución de problemas, licencias), en rumano, inglés y español. También disponibles directamente en [`docs/guides/`](docs/guides/).

@@ -7,6 +7,9 @@ Encoder nativ, open-source, pentru DaVinci Resolve Studio — H.264 și H.265 pr
 
 > Necesită **DaVinci Resolve Studio** — versiunea gratuită nu suportă IOPlugins.
 
+> **Ediția Windows 1.7.1 (întreținere): gratuită, fără activare, cont, probă sau donație obligatorie, fără apeluri la servere.** Pornește de la v1.7.0 cu codul de licență eliminat; dezvoltarea de funcții noi pentru Windows este suspendată, contribuțiile sunt binevenite. Starea probei în Resolve pe Windows: vezi pagina https://gordas.dev/gdc-resolve-encoder/ . Fragmentele de mai jos despre licență/activare se referă la versiunile anterioare.
+
+
 ## Ghid complet, în 3 limbi
 
 Fiecare arhivă din [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) include și un ghid PDF complet (instalare, fiecare setare explicată cu exemple, rețete practice, depanare, licențe), în română, engleză și spaniolă. Le găsești și direct în [`docs/guides/`](docs/guides/).

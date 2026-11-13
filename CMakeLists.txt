@@ -8,13 +8,7 @@ set(PLUGIN_NAME gdc_resolve_encoder)
 add_library(${PLUGIN_NAME} SHARED
     src/plugin.cpp
     src/ffmpeg_encoder.cpp
-    src/license_check.cpp
     src/gdc_container.cpp
-    vendor/ed25519/verify.c
-    vendor/ed25519/ge.c
-    vendor/ed25519/sc.c
-    vendor/ed25519/fe.c
-    vendor/ed25519/sha512.c
     wrapper/plugin_api.cpp
     wrapper/host_api.cpp
 )
@@ -23,7 +17,6 @@ target_include_directories(${PLUGIN_NAME} PRIVATE
     ${CMAKE_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/wrapper
-    ${CMAKE_SOURCE_DIR}/vendor/ed25519
 )
 
 if (WIN32)
@@ -35,9 +28,6 @@ if (WIN32)
     target_include_directories(${PLUGIN_NAME} PRIVATE "${FFMPEG_ROOT}/include")
     target_link_directories(${PLUGIN_NAME} PRIVATE "${FFMPEG_ROOT}/lib")
     target_link_libraries(${PLUGIN_NAME} PRIVATE avformat avcodec avutil swscale swresample)
-    # GDC-SEC-02: machine_id_hash() interogheaza WMI (Win32_ComputerSystemProduct
-    # + Win32_DiskDrive) prin COM — vezi src/license_check.cpp.
-    target_link_libraries(${PLUGIN_NAME} PRIVATE wbemuuid ole32 oleaut32)
 else()
     find_package(PkgConfig REQUIRED)
     pkg_check_modules(FFMPEG REQUIRED IMPORTED_TARGET
@@ -55,7 +45,7 @@ set_target_properties(${PLUGIN_NAME} PROPERTIES
 )
 
 if (APPLE)
-    target_link_libraries(${PLUGIN_NAME} PRIVATE "-framework VideoToolbox" "-framework CoreMedia" "-framework CoreVideo" "-framework IOKit" "-framework CoreFoundation")
+    target_link_libraries(${PLUGIN_NAME} PRIVATE "-framework VideoToolbox" "-framework CoreMedia" "-framework CoreVideo" "-framework CoreFoundation")
     # Apple Silicon only — Intel Macs are no longer a build target.
     set_target_properties(${PLUGIN_NAME} PROPERTIES OSX_ARCHITECTURES "arm64")
 endif()
