@@ -15,7 +15,7 @@ rezumatul a "ce s-a schimbat", ușor de scanat rapid).
 - **Export eșuat**: nu rămâne un fișier nefinalizat, iar motivul apare în jurnalul Resolve. **Export oprit de utilizator**: rămâne un fișier valid, până la ultimul cadru scris.
 - Versiunea apare în panoul plugin-ului și în jurnal; jurnalul conține și setările de control al ratei folosite.
 - Pachetul macOS include acum textele de licență ale tuturor bibliotecilor (FFmpeg, x264, x265 etc.) și indicații pentru codul sursă.
-- Windows: neschimbat în această versiune; contribuțiile sunt binevenite (vezi README).
+- Windows: nu face parte din această versiune. Ediția Windows gratuită, fără activare, este v1.7.1 (întreținere, din v1.7.0 cu codul de licență eliminat), pregătită într-o ramură separată și încă neverificată în Resolve pe Windows; vezi README. Contribuțiile sunt binevenite.
 
 ## v1.7.0 (2026-09-21) — Formate proprii: GDC QuickTime, GDC MP4, GDC Matroska (cu HDR în fișier)
 

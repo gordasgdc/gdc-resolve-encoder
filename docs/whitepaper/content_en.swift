@@ -60,7 +60,7 @@ private func en2() -> [Block] { [
     .table(headers: ["Requirement", "Details"], rows: [
         ["DaVinci Resolve", "**Studio** version (the export plugin SDK works in Studio). Verified on Studio 21.1."],
         ["Mac", "macOS on **Apple Silicon** (M1/M2/M3/M4...). Intel Macs are not a target of this version."],
-        ["Windows", "Not part of edition 1.8.0 and not verified; contributions are welcome. NVENC hardware encoding would require an NVIDIA GPU and a current driver."],
+        ["Windows", "Not part of the macOS edition 1.8.0. The free Windows edition, with no activation, is v1.7.1 (maintenance: v1.7.0 with the licence code removed, no new features): the package is yet to be built in CI and has not been verified in DaVinci Resolve on Windows; contributions, including the test, are welcome. NVENC hardware encoding would require an NVIDIA GPU and a current driver."],
         ["Linux", "Not offered."],
         ["Mac installation", "Signed and Apple-notarized `.pkg`, installed by double-click into Resolve's IOPlugins folder."],
         ["Windows installation", "Archive with an install script; copies the plugin into Resolve's IOPlugins folder."],

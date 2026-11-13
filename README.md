@@ -38,11 +38,11 @@ Ediția 1.8.0, DaVinci Resolve Studio 21.2, Mac cu Apple Silicon, material de ca
 
 ## Windows
 
-**Windows — ultima versiune stabilă publicată: [v1.7.0](https://github.com/gordasgdc/gdc-resolve-encoder/releases/tag/v1.7.0).** Dezvoltarea și testarea pentru Windows sunt suspendate deoarece nu mai am un sistem Windows disponibil pentru verificări. Versiunea existentă rămâne disponibilă pentru descărcare. Contribuțiile pentru continuarea suportului Windows sunt binevenite.
+**Windows — ediție gratuită v1.7.1 (întreținere), fără activare.** Pornește de la ultima bază Windows stabilă (v1.7.0) cu codul de licență eliminat: fără cont, perioadă de probă, cod de activare, donație obligatorie sau apeluri la servere; funcțiile rămân cele din v1.7.0, fără funcții noi. Dezvoltarea pentru Windows este suspendată, iar contribuțiile sunt binevenite.
 
-- Descărcare directă: [`gdc-resolve-encoder-windows-x64.zip`](https://github.com/gordasgdc/gdc-resolve-encoder/releases/download/v1.7.0/gdc-resolve-encoder-windows-x64.zip) (50,2 MB, SHA-256 `785d1dc93e3c8085c7ae29b0b6a405ffc4e1384cf6735e09163ed187ed44d5f2`). Linkul rămâne valid și după ce 1.8.0 devine „Latest”.
-- Instalare: dezarhivează, apoi rulează `install.bat` (dublu-clic): copiază `gdc_resolve_encoder.dvcp.bundle` în `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\`, cerând singur drepturi de administrator. Repornește DaVinci Resolve Studio. NVENC cere placă NVIDIA cu driver actual.
-- **Condiții de utilizare (diferă de ediția gratuită macOS):** v1.7.0 necesită un cod de activare legat de Machine ID, iar susținerea proiectului se face exclusiv ca donație; termenii și ghidul din arhivă descriu acele condiții. Ediția macOS 1.8.0 nu cere activare, cont, perioadă de probă sau donație.
+- **Stare reală:** sursa este în ramura `maintenance/windows-1.7.1`, iar pachetul urmează să fie construit în CI (FFmpeg 9.0.2 fixat). **Încărcarea și exportul cu imagine și sunet în DaVinci Resolve Studio pe Windows nu au fost încă verificate**: nu mai am un sistem Windows. Descărcarea gratuită va apărea în [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases) (ca versiune preliminară) și pe [pagina produsului](https://gordas.dev/gdc-resolve-encoder/) abia după ce pachetul este construit și publicat. Cine poate face proba pe Windows ajută direct; vezi [CONTRIBUTING.md](CONTRIBUTING.md).
+- Instalare (după publicare): dezarhivează, rulează `install.bat` (dublu-clic; cere singur drepturi de administrator), repornește DaVinci Resolve Studio.
+- Versiunea istorică v1.7.0 rămâne în arhiva release-urilor, dar cere un cod de activare legat de Machine ID: nu este ediția fără activare și nu este oferită ca descărcare.
 
 
 ## Construire din sursă (macOS)

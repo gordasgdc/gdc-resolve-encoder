@@ -18,11 +18,12 @@ SHA = "ed00b95498f3f9e3e11136baf79178f55cfb08f1d1ae44af5d099c8f7d6c0351"
 SIZE_MB = {"ro": "15,3 MB", "en": "15.3 MB", "es": "15,3 MB"}
 BASE = "https://gordas.dev/gdc-resolve-encoder/"
 REPO = "https://github.com/gordasgdc/gdc-resolve-encoder"
-WIN_VERSION = "1.7.0"
-WIN_FILE = "gdc-resolve-encoder-windows-x64.zip"
-WIN_URL = f"{REPO}/releases/download/v{WIN_VERSION}/{WIN_FILE}"
-WIN_SHA = "785d1dc93e3c8085c7ae29b0b6a405ffc4e1384cf6735e09163ed187ed44d5f2"
-WIN_BYTES = 50165975
+WIN_VERSION = "1.7.1"
+WIN_FILE = "gdc-resolve-encoder-1.7.1-windows-x64.zip"
+# Filled only when the 1.7.1 asset is published and its download checked; None = awaiting the Resolve test on Windows.
+WIN_URL = None  # f"{REPO}/releases/download/v1.7.1/{WIN_FILE}"
+WIN_SHA = None
+WIN_BYTES = None
 
 T = {
 "ro": dict(
@@ -55,7 +56,7 @@ T = {
     edcap="Rezumat al verificărilor din ediția 1.8.0, pe Mac cu Apple Silicon.",
     res_label="CE ESTE ȘI CE NU ESTE", res_h="Un plugin independent.<br>Nu un produs Blackmagic.",
     res_p1="Funcționează cu DaVinci Resolve Studio; versiunea gratuită nu încarcă pluginuri de export. Pluginul rulează local și nu trimite date nicăieri.",
-    res_p2="Windows nu face parte din ediția 1.8.0: ultima versiune Windows publicată este v1.7.0 (vezi Descărcare). Dezvoltarea pentru Windows e suspendată; contribuțiile sunt binevenite.",
+    res_p2='Windows nu face parte din ediția macOS 1.8.0: ediția Windows gratuită este v1.7.1 (întreținere, vezi Windows). Dezvoltarea de funcții noi pentru Windows e suspendată; contribuțiile sunt binevenite.',
     res_small="GDC Resolve Encoder este un proiect independent. Nu este dezvoltat, aprobat sau susținut de Blackmagic Design. DaVinci Resolve este marca deținătorului său.",
     acc_label="GDC RESOLVE ENCODER · GRATUIT · SURSĂ DESCHISĂ", acc_h="Descarcă GDC Resolve Encoder.",
     acc_p="Gratuit și cu sursă deschisă. Fără cont, activare, perioadă de probă sau donație obligatorie: instalezi și randezi.",
@@ -69,13 +70,16 @@ T = {
     foot_l="GDC Resolve Encoder · Dumitru Cristinel Gordas (GDC)", foot_m=f"MIT + GPLv3 (pachet Mac) · {VERSION}",
     foot_links=[("#flux", "Fluxul Deliver"), ("#calitate", "Calitate"), ("#acces", "Descărcare"), (REPO, "Cod sursă")],
     win_h='Windows',
-    win_p='Windows — ultima versiune stabilă publicată: v1.7.0. Dezvoltarea și testarea pentru Windows sunt suspendate deoarece nu mai am un sistem Windows disponibil pentru verificări. Versiunea existentă rămâne disponibilă pentru descărcare. Contribuțiile pentru continuarea suportului Windows sunt binevenite.',
-    win_dl='Descarcă v1.7.0 pentru Windows',
-    win_meta='Versiunea 1.7.0 · gdc-resolve-encoder-windows-x64.zip · arhivă .zip · 50,2 MB · Windows 10/11, 64-bit',
-    win_inst_h='Instalare Windows (v1.7.0)',
-    win_inst='1. Dezarhivează fișierul.<br>2. Rulează <code>install.bat</code> cu dublu-clic: copiază folderul <code>gdc_resolve_encoder.dvcp.bundle</code> în <code>%ProgramData%\\Blackmagic Design\\DaVinci Resolve\\Support\\IOPlugins\\</code> și cere singur drepturi de administrator.<br>3. Repornește DaVinci Resolve (Studio). Codarea hardware NVENC cere o placă NVIDIA cu driver actual.',
-    win_terms_h='Condiții de utilizare pentru v1.7.0',
-    win_terms='Versiunea Windows v1.7.0 păstrează condițiile din acea versiune, diferite de ediția gratuită macOS: necesită un cod de activare legat de Machine ID-ul calculatorului, iar susținerea proiectului se face exclusiv ca donație. Termenii și ghidul PDF din arhivă descriu acele condiții. Ediția macOS 1.8.0 nu cere activare, cont, perioadă de probă sau donație.',
+    win_pending='Descărcare Windows v1.7.1 — în așteptarea probei',
+    win_old='Versiunea istorică v1.7.0 rămâne în arhiva release-urilor, dar cere un cod de activare: nu este ediția fără activare și nu este oferită ca descărcare aici.',
+    win_help='Cum poți ajuta cu proba pe Windows',
+    win_p='Windows — ediție gratuită v1.7.1 (întreținere), fără activare. Stare reală: sursa este pregătită și pachetul urmează să fie construit în CI, dar proba încărcării și a exportului cu imagine și sunet în DaVinci Resolve Studio pe Windows încă lipsește: nu mai am un sistem Windows disponibil pentru verificări. Descărcarea gratuită apare aici imediat ce pachetul este publicat. Dezvoltarea de funcții noi pentru Windows este suspendată; contribuțiile, inclusiv proba pe Windows, sunt binevenite.',
+    win_dl='Descarcă v1.7.1 pentru Windows',
+    win_meta='Versiunea 1.7.1 · gdc-resolve-encoder-1.7.1-windows-x64.zip · arhivă .zip · Windows 10/11, 64-bit',
+    win_inst_h='Instalare Windows (v1.7.1)',
+    win_inst='1. Dezarhivează fișierul.<br>2. Rulează <code>install.bat</code> cu dublu-clic: copiază folderul <code>gdc_resolve_encoder.dvcp.bundle</code> în <code>%ProgramData%\\Blackmagic Design\\DaVinci Resolve\\Support\\IOPlugins\\</code> și cere singur drepturi de administrator.<br>3. Repornește DaVinci Resolve Studio.',
+    win_terms_h='Condiții de utilizare pentru v1.7.1',
+    win_terms='Gratuit, fără cont, perioadă de probă, cod de activare sau donație obligatorie; pluginul nu contactează niciun server. Pornește de la v1.7.0 cu codul de licență eliminat, fără funcții noi.',
     mac_h='macOS — ediția întreținută activ',
     guide="Ghid PDF", guide_file="GDC_Resolve_Encoder_Ghid_RO.pdf",
     legal=[("Termeni", "termeni"), ("Confidențialitate", "confidentialitate"), ("Cookie", "cookie")],
@@ -111,7 +115,7 @@ T = {
     edcap="Summary of the checks for edition 1.8.0, on an Apple Silicon Mac.",
     res_label="WHAT IT IS AND ISN'T", res_h="An independent plugin.<br>Not a Blackmagic product.",
     res_p1="It works with DaVinci Resolve Studio; the free version does not load export plugins. The plugin runs locally and sends no data anywhere.",
-    res_p2="Windows is not part of edition 1.8.0: the latest published Windows version is v1.7.0 (see Download). Windows development is suspended; contributions are welcome.",
+    res_p2='Windows is not part of the macOS 1.8.0 edition: the free Windows edition is v1.7.1 (maintenance, see Windows). Development of new Windows features is suspended; contributions are welcome.',
     res_small="GDC Resolve Encoder is an independent project. It is not developed, endorsed or supported by Blackmagic Design. DaVinci Resolve is a trademark of its owner.",
     acc_label="GDC RESOLVE ENCODER · FREE · OPEN SOURCE", acc_h="Download GDC Resolve Encoder.",
     acc_p="Free and open source. No account, activation, trial period or mandatory donation: install and render.",
@@ -125,13 +129,16 @@ T = {
     foot_l="GDC Resolve Encoder · Dumitru Cristinel Gordas (GDC)", foot_m=f"MIT + GPLv3 (Mac package) · {VERSION}",
     foot_links=[("#flux", "The Deliver flow"), ("#calitate", "Quality"), ("#acces", "Download"), (REPO, "Source code")],
     win_h='Windows',
-    win_p='Windows — latest stable published version: v1.7.0. Development and testing for Windows are suspended because I no longer have a Windows system available for verification. The existing version stays available for download. Contributions to continue Windows support are welcome.',
-    win_dl='Download v1.7.0 for Windows',
-    win_meta='Version 1.7.0 · gdc-resolve-encoder-windows-x64.zip · .zip archive · 50.2 MB · Windows 10/11, 64-bit',
-    win_inst_h='Windows installation (v1.7.0)',
-    win_inst='1. Unzip the file.<br>2. Double-click <code>install.bat</code>: it copies the <code>gdc_resolve_encoder.dvcp.bundle</code> folder to <code>%ProgramData%\\Blackmagic Design\\DaVinci Resolve\\Support\\IOPlugins\\</code> and asks for administrator rights by itself.<br>3. Restart DaVinci Resolve (Studio). NVENC hardware encoding needs an NVIDIA card with a current driver.',
-    win_terms_h='Terms of use for v1.7.0',
-    win_terms="The Windows v1.7.0 version keeps the terms of that release, which differ from the free macOS edition: it requires an activation code bound to the computer's Machine ID, and supporting the project is done only as a donation. The terms and the PDF guide inside the archive describe those conditions. The macOS 1.8.0 edition asks for no activation, account, trial period or donation.",
+    win_pending='Windows v1.7.1 download — awaiting the test',
+    win_old='The historical v1.7.0 stays in the release archive but requires an activation code: it is not the no-activation edition and is not offered as a download here.',
+    win_help='How you can help with the Windows test',
+    win_p='Windows — free edition v1.7.1 (maintenance), no activation. Actual status: the source is ready and the package is yet to be built in CI, but the test of loading and exporting with picture and sound in DaVinci Resolve Studio on Windows is still missing: I no longer have a Windows system available for verification. The free download appears here as soon as the package is published. Development of new Windows features is suspended; contributions, including the Windows test, are welcome.',
+    win_dl='Download v1.7.1 for Windows',
+    win_meta='Version 1.7.1 · gdc-resolve-encoder-1.7.1-windows-x64.zip · .zip archive · Windows 10/11, 64-bit',
+    win_inst_h='Windows installation (v1.7.1)',
+    win_inst='1. Unzip the file.<br>2. Double-click <code>install.bat</code>: it copies the <code>gdc_resolve_encoder.dvcp.bundle</code> folder to <code>%ProgramData%\\Blackmagic Design\\DaVinci Resolve\\Support\\IOPlugins\\</code> and asks for administrator rights by itself.<br>3. Restart DaVinci Resolve Studio.',
+    win_terms_h='Terms of use for v1.7.1',
+    win_terms='Free, with no account, trial period, activation code or mandatory donation; the plugin contacts no server. It starts from v1.7.0 with the licence code removed, with no new features.',
     mac_h='macOS — the actively maintained edition',
     guide="PDF guide", guide_file="GDC_Resolve_Encoder_Guide_EN.pdf",
     legal=[("Terms", "termeni"), ("Privacy", "confidentialitate"), ("Cookies", "cookie")],
@@ -167,7 +174,7 @@ T = {
     edcap="Resumen de las comprobaciones de la edición 1.8.0, en un Mac con Apple Silicon.",
     res_label="QUÉ ES Y QUÉ NO ES", res_h="Un plugin independiente.<br>No un producto de Blackmagic.",
     res_p1="Funciona con DaVinci Resolve Studio; la versión gratuita no carga plugins de exportación. El plugin se ejecuta en local y no envía datos a ninguna parte.",
-    res_p2="Windows no forma parte de la edición 1.8.0: la última versión de Windows publicada es v1.7.0 (véase Descarga). El desarrollo para Windows está suspendido; se aceptan contribuciones.",
+    res_p2='Windows no forma parte de la edición macOS 1.8.0: la edición gratuita para Windows es v1.7.1 (mantenimiento, véase Windows). El desarrollo de nuevas funciones para Windows está suspendido; se aceptan contribuciones.',
     res_small="GDC Resolve Encoder es un proyecto independiente. No está desarrollado, aprobado ni respaldado por Blackmagic Design. DaVinci Resolve es una marca de su titular.",
     acc_label="GDC RESOLVE ENCODER · GRATIS · CÓDIGO ABIERTO", acc_h="Descarga GDC Resolve Encoder.",
     acc_p="Gratuito y de código abierto. Sin cuenta, activación, periodo de prueba ni donación obligatoria: instalas y renderizas.",
@@ -181,13 +188,16 @@ T = {
     foot_l="GDC Resolve Encoder · Dumitru Cristinel Gordas (GDC)", foot_m=f"MIT + GPLv3 (paquete Mac) · {VERSION}",
     foot_links=[("#flux", "El flujo de Deliver"), ("#calitate", "Calidad"), ("#acces", "Descarga"), (REPO, "Código fuente")],
     win_h='Windows',
-    win_p='Windows — última versión estable publicada: v1.7.0. El desarrollo y las pruebas para Windows están suspendidos porque ya no dispongo de un sistema Windows para verificar. La versión existente sigue disponible para descargar. Se agradecen las contribuciones para continuar el soporte de Windows.',
-    win_dl='Descargar v1.7.0 para Windows',
-    win_meta='Versión 1.7.0 · gdc-resolve-encoder-windows-x64.zip · archivo .zip · 50,2 MB · Windows 10/11, 64 bits',
-    win_inst_h='Instalación en Windows (v1.7.0)',
-    win_inst='1. Descomprime el archivo.<br>2. Ejecuta <code>install.bat</code> con doble clic: copia la carpeta <code>gdc_resolve_encoder.dvcp.bundle</code> a <code>%ProgramData%\\Blackmagic Design\\DaVinci Resolve\\Support\\IOPlugins\\</code> y pide por sí mismo permisos de administrador.<br>3. Reinicia DaVinci Resolve (Studio). La codificación por hardware NVENC requiere una tarjeta NVIDIA con un controlador actual.',
-    win_terms_h='Condiciones de uso de v1.7.0',
-    win_terms='La versión de Windows v1.7.0 conserva las condiciones de esa versión, distintas de la edición gratuita para macOS: requiere un código de activación vinculado al Machine ID del ordenador, y el apoyo al proyecto se hace únicamente como donación. Los términos y la guía PDF dentro del archivo describen esas condiciones. La edición 1.8.0 para macOS no pide activación, cuenta, periodo de prueba ni donación.',
+    win_pending='Descarga de Windows v1.7.1 — en espera de la prueba',
+    win_old='La versión histórica v1.7.0 sigue en el archivo de releases, pero requiere un código de activación: no es la edición sin activación y aquí no se ofrece como descarga.',
+    win_help='Cómo puedes ayudar con la prueba en Windows',
+    win_p='Windows — edición gratuita v1.7.1 (mantenimiento), sin activación. Estado real: el código fuente está listo y el paquete se construirá en CI, pero falta la prueba de carga y de exportación con imagen y sonido en DaVinci Resolve Studio en Windows: ya no dispongo de un sistema Windows para verificar. La descarga gratuita aparecerá aquí en cuanto se publique el paquete. El desarrollo de nuevas funciones para Windows está suspendido; se agradecen las contribuciones, incluida la prueba en Windows.',
+    win_dl='Descargar v1.7.1 para Windows',
+    win_meta='Versión 1.7.1 · gdc-resolve-encoder-1.7.1-windows-x64.zip · archivo .zip · Windows 10/11, 64 bits',
+    win_inst_h='Instalación en Windows (v1.7.1)',
+    win_inst='1. Descomprime el archivo.<br>2. Ejecuta <code>install.bat</code> con doble clic: copia la carpeta <code>gdc_resolve_encoder.dvcp.bundle</code> a <code>%ProgramData%\\Blackmagic Design\\DaVinci Resolve\\Support\\IOPlugins\\</code> y pide por sí mismo permisos de administrador.<br>3. Reinicia DaVinci Resolve Studio.',
+    win_terms_h='Condiciones de uso de v1.7.1',
+    win_terms='Gratuita, sin cuenta, periodo de prueba, código de activación ni donación obligatoria; el plugin no contacta ningún servidor. Parte de v1.7.0 sin el código de licencia, sin funciones nuevas.',
     mac_h='macOS — la edición mantenida activamente',
     guide="Guía PDF", guide_file="GDC_Resolve_Encoder_Guia_ES.pdf",
     legal=[("Términos", "termeni"), ("Privacidad", "confidentialitate"), ("Cookies", "cookie")],
@@ -275,6 +285,12 @@ def page(code):
         f'<a href="{(t["home"] if c == "ro" else t["home"] + c + "/") if code != c else "./"}" hreflang="{c}" lang="{c}"'
         + (' aria-current="page"' if c == code else "") + f">{c.upper()}</a>" for c in T)
     pre = t["prefix"]
+    if WIN_URL:
+        win_button = (f'<p><a class="pill" style="background:none;color:#fff;border:1px solid #fff" href="{WIN_URL}">{e(t["win_dl"])} <span>↓</span></a></p>'
+                      f'<p style="font-size:12px">{e(t["win_meta"])}<br>SHA-256: <code>{WIN_SHA}</code></p>')
+    else:  # package not published yet: show the real state, no link to any other package
+        win_button = (f'<p><span class="pill" style="background:none;color:#fff;border:1px dashed #fff;opacity:.8" aria-disabled="true">{e(t["win_pending"])}</span></p>'
+                      f'<p style="font-size:12px">{e(t["win_meta"])}</p>')
     pins = "".join(
         f'<button class="pin" style="--x:{x};--y:{y}" data-feature="{i}" aria-label="{e(t["pins"][i][0])}" aria-pressed="{"true" if i == 0 else "false"}"><span>0{i+1}</span><em>{e(t["pins"][i][0])}</em></button>'
         for i, (x, y) in enumerate(PINS))
@@ -309,8 +325,8 @@ def page(code):
 <p style="font-size:12px"><a href="{guide}">{e(t["guide"])}</a></p>
 <h3>{e(t['req_h'])}</h3><p>{e(t['req_p'])}</p><h3>{e(t['inst_h'])}</h3><p>{t['inst_p']}</p><h3>{e(t['open_h'])}</h3><p>{t['open_p']}</p>
 <div id="windows" style="max-width:68ch;margin:46px auto 0;padding-top:34px;border-top:1px solid #ffffff26"><h3 style="margin-top:0">{e(t['win_h'])}</h3><p>{e(t['win_p'])}</p>
-<p><a class="pill" style="background:none;color:#fff;border:1px solid #fff" href="{WIN_URL}">{e(t['win_dl'])} <span>↓</span></a></p>
-<p style="font-size:12px">{e(t['win_meta'])}<br>SHA-256: <code>{WIN_SHA}</code></p><h3>{e(t['win_inst_h'])}</h3><p>{t['win_inst']}</p><h3>{e(t['win_terms_h'])}</h3><p>{e(t['win_terms'])}</p></div>
+{win_button}
+<h3>{e(t['win_inst_h'])}</h3><p>{t['win_inst']}</p><h3>{e(t['win_terms_h'])}</h3><p>{e(t['win_terms'])}</p><p style="font-size:13px">{e(t['win_old'])}</p><p style="font-size:13px"><a href="{REPO}/blob/main/CONTRIBUTING.md">{e(t['win_help'])}</a></p></div>
 <p class="label" style="margin-top:28px">{e(t['status_h'])}</p><p style="font-size:11px;max-width:70ch">{e(t['status'])}</p></section></main>
 <footer><span>{e(t['foot_l'])}<br><span style="display:block;margin-top:10px">{e(t['foot_m'])}</span><span style="display:block;margin-top:6px;max-width:48ch">{e(t['note'])}</span></span><div>{foot}</div></footer>
 <script>

@@ -60,7 +60,7 @@ private func es2() -> [Block] { [
     .table(headers: ["Requisito", "Detalles"], rows: [
         ["DaVinci Resolve", "Versión **Studio** (el SDK de plugins de exportación funciona en Studio). Verificado en Studio 21.1."],
         ["Mac", "macOS en **Apple Silicon** (M1/M2/M3/M4...). Los Mac Intel no son el objetivo de esta versión."],
-        ["Windows", "No forma parte de la edición 1.8.0 y no se ha verificado; se aceptan contribuciones. La codificación por hardware NVENC requeriría GPU NVIDIA y un controlador actual."],
+        ["Windows", "No forma parte de la edición macOS 1.8.0. La edición gratuita para Windows, sin activación, es v1.7.1 (mantenimiento: v1.7.0 sin el código de licencia, sin funciones nuevas): el paquete se construirá en CI y aún no se ha verificado en DaVinci Resolve en Windows; se agradecen las contribuciones, incluida la prueba. La codificación por hardware NVENC requeriría GPU NVIDIA y un controlador actual."],
         ["Linux", "No se ofrece."],
         ["Instalación en Mac", "Paquete `.pkg` firmado y notarizado por Apple, que se instala con doble clic en la carpeta IOPlugins de Resolve."],
         ["Instalación en Windows", "Archivo con script de instalación; copia el plugin en la carpeta IOPlugins de Resolve."],

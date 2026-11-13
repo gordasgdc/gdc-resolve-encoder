@@ -63,7 +63,7 @@ private func ch2() -> [Block] { [
     .table(headers: ["Cerință", "Detalii"], rows: [
         ["DaVinci Resolve", "Versiunea **Studio** (SDK-ul de plugin-uri de export funcționează în Studio). Verificat pe Studio 21.1."],
         ["Mac", "macOS pe **Apple Silicon** (M1/M2/M3/M4...). Mac-urile Intel nu sunt ținta acestei versiuni."],
-        ["Windows", "Nu face parte din ediția 1.8.0 și nu a fost verificat; contribuțiile sunt binevenite. Codarea hardware NVENC ar cere GPU NVIDIA și driver actual."],
+        ["Windows", "Nu face parte din ediția macOS 1.8.0. Ediția Windows gratuită, fără activare, este v1.7.1 (întreținere, din v1.7.0 cu codul de licență eliminat, fără funcții noi): pachetul urmează să fie construit în CI și nu a fost încă verificat în DaVinci Resolve pe Windows; contribuțiile, inclusiv proba, sunt binevenite. Codarea hardware NVENC ar cere GPU NVIDIA și driver actual."],
         ["Linux", "Nu este oferit."],
         ["Instalare Mac", "Pachet `.pkg` semnat și notarizat de Apple, instalat cu dublu-clic în folderul IOPlugins al lui Resolve."],
         ["Instalare Windows", "Arhivă cu script de instalare; copiază pluginul în folderul IOPlugins al lui Resolve."],

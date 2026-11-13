@@ -38,11 +38,11 @@ Edición 1.8.0, DaVinci Resolve Studio 21.2, Mac con Apple Silicon, material de 
 
 ## Windows
 
-**Windows — última versión estable publicada: [v1.7.0](https://github.com/gordasgdc/gdc-resolve-encoder/releases/tag/v1.7.0).** El desarrollo y las pruebas para Windows están suspendidos porque ya no dispongo de un sistema Windows para verificar. La versión existente sigue disponible para descargar. Se agradecen las contribuciones para continuar el soporte de Windows.
+**Windows — edición gratuita v1.7.1 (mantenimiento), sin activación.** Parte de la última base estable de Windows (v1.7.0) sin el código de licencia: sin cuenta, periodo de prueba, código de activación, donación obligatoria ni llamadas a servidores; las funciones siguen siendo las de v1.7.0, sin funciones nuevas. El desarrollo para Windows está suspendido y se agradecen las contribuciones.
 
-- Descarga directa: [`gdc-resolve-encoder-windows-x64.zip`](https://github.com/gordasgdc/gdc-resolve-encoder/releases/download/v1.7.0/gdc-resolve-encoder-windows-x64.zip) (50,2 MB, SHA-256 `785d1dc93e3c8085c7ae29b0b6a405ffc4e1384cf6735e09163ed187ed44d5f2`). El enlace sigue siendo válido cuando 1.8.0 pase a ser «Latest».
-- Instalación: descomprime y ejecuta `install.bat` con doble clic: copia `gdc_resolve_encoder.dvcp.bundle` a `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\` y pide por sí mismo permisos de administrador. Reinicia DaVinci Resolve Studio. NVENC requiere una tarjeta NVIDIA con un controlador actual.
-- **Condiciones de uso (difieren de la edición gratuita para macOS):** v1.7.0 requiere un código de activación vinculado al Machine ID, y el apoyo al proyecto se hace únicamente como donación; los términos y la guía dentro del archivo describen esas condiciones. La edición 1.8.0 para macOS no pide activación, cuenta, periodo de prueba ni donación.
+- **Estado real:** el código está en la rama `maintenance/windows-1.7.1` y el paquete se construirá en CI (FFmpeg 9.0.2 fijado). **Aún no se ha verificado la carga ni la exportación con imagen y sonido en DaVinci Resolve Studio en Windows**: ya no dispongo de un sistema Windows. La descarga gratuita aparecerá en [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases) (como versión preliminar) y en la [página del producto](https://gordas.dev/gdc-resolve-encoder/es/) solo cuando el paquete esté construido y publicado. Quien pueda hacer la prueba en Windows ayuda directamente; consulta [CONTRIBUTING.md](CONTRIBUTING.md).
+- Instalación (tras la publicación): descomprime, ejecuta `install.bat` (doble clic; pide por sí mismo permisos de administrador) y reinicia DaVinci Resolve Studio.
+- La versión histórica v1.7.0 sigue en el archivo de releases, pero requiere un código de activación vinculado al Machine ID: no es la edición sin activación y no se ofrece como descarga.
 
 
 ## Compilar desde el código fuente (macOS)

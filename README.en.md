@@ -38,11 +38,11 @@ Edition 1.8.0, DaVinci Resolve Studio 21.2, Apple Silicon Mac, cinema camera mat
 
 ## Windows
 
-**Windows — latest stable published version: [v1.7.0](https://github.com/gordasgdc/gdc-resolve-encoder/releases/tag/v1.7.0).** Development and testing for Windows are suspended because I no longer have a Windows system available for verification. The existing version stays available for download. Contributions to continue Windows support are welcome.
+**Windows — free edition v1.7.1 (maintenance), no activation.** It starts from the last stable Windows base (v1.7.0) with the licence code removed: no account, trial period, activation code, mandatory donation or server calls; the features stay those of v1.7.0, with no new features. Windows development is suspended and contributions are welcome.
 
-- Direct download: [`gdc-resolve-encoder-windows-x64.zip`](https://github.com/gordasgdc/gdc-resolve-encoder/releases/download/v1.7.0/gdc-resolve-encoder-windows-x64.zip) (50.2 MB, SHA-256 `785d1dc93e3c8085c7ae29b0b6a405ffc4e1384cf6735e09163ed187ed44d5f2`). The link stays valid after 1.8.0 becomes "Latest".
-- Installation: unzip, then double-click `install.bat`: it copies `gdc_resolve_encoder.dvcp.bundle` to `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\`, asking for administrator rights by itself. Restart DaVinci Resolve Studio. NVENC needs an NVIDIA card with a current driver.
-- **Terms of use (they differ from the free macOS edition):** v1.7.0 requires an activation code bound to the Machine ID, and supporting the project is done only as a donation; the terms and the guide inside the archive describe those conditions. The macOS 1.8.0 edition asks for no activation, account, trial period or donation.
+- **Actual status:** the source is in the `maintenance/windows-1.7.1` branch and the package is yet to be built in CI (FFmpeg 9.0.2, pinned). **Loading and exporting with picture and sound in DaVinci Resolve Studio on Windows have not been verified yet**: I no longer have a Windows system. The free download will appear in [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases) (as a pre-release) and on the [product page](https://gordas.dev/gdc-resolve-encoder/en/) only once the package is built and published. Anyone who can run the Windows test helps directly; see [CONTRIBUTING.md](CONTRIBUTING.md).
+- Installation (after publication): unzip, run `install.bat` (double-click; it asks for administrator rights by itself), restart DaVinci Resolve Studio.
+- The historical v1.7.0 stays in the release archive but requires an activation code bound to the Machine ID: it is not the no-activation edition and is not offered as a download.
 
 
 ## Building from source (macOS)
