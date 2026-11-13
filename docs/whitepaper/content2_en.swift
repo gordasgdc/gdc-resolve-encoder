@@ -375,7 +375,7 @@ func en13() -> [Block] { [
     .h1("13. Troubleshooting"),
     .table(headers: ["Problem", "Probable causes", "Fix"], rows: [
         ["I do not see the GDC codecs or formats in Deliver", "Plugin not installed; Resolve not restarted; you have the Free version, not Studio; unsupported system", "Reinstall the package; close Resolve, wait at least 20 seconds, then reopen it; check for the Studio version"],
-        ["The export does not start", "License not activated; invalid Advanced Params; odd width or height", "Enter the activation code; clear Advanced Params; use even dimensions"],
+        ["The export does not start", "Invalid Advanced Params; odd width or height", "Clear Advanced Params; use even dimensions"],
         ["The image looks washed out or too contrasty", "Data Levels on Full for an SDR file; wrong Output Color Space", "Data Levels: Video; check Output Color Space"],
         ["HDR looks washed out on an SDR screen", "Normal behavior: the screen does no tone mapping", "Check on a real HDR screen; for SDR deliver a separate version"],
         ["Banding in the sky or gradients", "8-bit quantization; CRF too high", "Use the 10-bit variant; lower CRF; add `aq-mode=3`; add a little grain in Resolve"],

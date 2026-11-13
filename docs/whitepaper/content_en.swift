@@ -29,7 +29,7 @@ private func en1() -> [Block] { [
         ["HDR", "Static HDR10: mastering display, MaxCLL, MaxFALL (in the stream and, in the GDC formats, in the container)"],
         ["Controls", "Preset, Profile, Level, Tune, CRF / bitrate / constant QP, keyframe interval, expert x264/x265 parameters"],
         ["Formats", "Resolve's QuickTime, MP4 and MKV + GDC QuickTime, GDC MP4, GDC Matroska"],
-        ["Platforms", "macOS on Apple Silicon (arm64); Windows 64-bit"],
+        ["Platforms", "macOS on Apple Silicon (arm64), minimum macOS 26 declared by the build, verified on macOS 27. Windows is not part of edition 1.8.0."],
         ["Dependencies", "Nothing to install: FFmpeg and the required libraries ship inside the package"],
     ], widths: [0.24, 0.76]),
     .note(.info, "This document describes what the plugin does, how it works and how to configure it for concrete destinations. Chapter 14 states explicitly what has been verified in DaVinci Resolve and what has not been tested yet."),
@@ -60,12 +60,12 @@ private func en2() -> [Block] { [
     .table(headers: ["Requirement", "Details"], rows: [
         ["DaVinci Resolve", "**Studio** version (the export plugin SDK works in Studio). Verified on Studio 21.1."],
         ["Mac", "macOS on **Apple Silicon** (M1/M2/M3/M4...). Intel Macs are not a target of this version."],
-        ["Windows", "Windows 10/11, 64-bit. NVENC hardware encoding requires an NVIDIA GPU and a current driver."],
+        ["Windows", "Not part of edition 1.8.0 and not verified; contributions are welcome. NVENC hardware encoding would require an NVIDIA GPU and a current driver."],
         ["Linux", "Not offered."],
         ["Mac installation", "Signed and Apple-notarized `.pkg`, installed by double-click into Resolve's IOPlugins folder."],
         ["Windows installation", "Archive with an install script; copies the plugin into Resolve's IOPlugins folder."],
         ["Dependencies", "FFmpeg and the required libraries are included in the package; nothing else to install."],
-        ["License", "Activation code bound to the Machine ID (see chapter 3.6)."],
+        ["License", "Free and open source: no activation, account or mandatory donation (see chapter 3.6)."],
     ], widths: [0.24, 0.76]),
 ] }
 
@@ -100,8 +100,8 @@ private func en3() -> [Block] { [
         "**Resolve's formats** (QuickTime, MP4, MKV): Resolve packages the file and handles all the audio (PCM, AAC, etc.). The GDC codecs appear here as a codec choice. Resolve's container **does not write** HDR10 metadata into the container; it stays in the video stream.",
         "**The GDC formats** (GDC QuickTime, GDC MP4, GDC Matroska): the plugin packages the file. It writes the color tags, **mastering display** and **MaxCLL/MaxFALL** straight into the container, and the audio is uncompressed **PCM**.",
     ]),
-    .h2("3.6 Licensing"),
-    .p("The plugin requires an **activation code** bound to the computer's **Machine ID** (shown in the plugin panel). The code is entered once; after activation the field disappears from the panel. Verification is local, with no internet connection. Activation is obtained by supporting the project through a donation. Without an active license, the export does not start."),
+    .h2("3.6 License and distribution"),
+    .p("Edition 1.8.0 for macOS is **free** and **open source**: it asks for no activation code, Machine ID, account, trial period or donation. The plugin code is MIT-licensed; the Mac package includes FFmpeg, x264 and x265 and is distributed under the GPLv3, with the license texts and the source offer inside the package."),
 ] }
 
 private func en4() -> [Block] { [
@@ -151,7 +151,7 @@ private func en5() -> [Block] { [
         "**Audio**: PCM only in the GDC formats; PCM in MP4 has weak support in some players.",
         "**Playback compatibility**: 10-bit and 4:2:2 H.264 are not played by many TVs and phones; H.265 is not accepted everywhere.",
         "**No timecode or markers** in the GDC formats.",
-        "**Requires Resolve Studio** and an activated license.",
+        "**Requires Resolve Studio** (the free Resolve does not load export plugins).",
         "**Does not cover** deliveries that require ProRes, DNxHR, XDCAM or DCP; those stay with the native codecs.",
     ]),
     .h2("5.3 When NOT to use the plugin"),

@@ -31,7 +31,7 @@ private func ch1() -> [Block] { [
         ["HDR", "HDR10 static: mastering display, MaxCLL, MaxFALL (în flux și, în formatele GDC, în container)"],
         ["Controale", "Preset, Profile, Level, Tune, CRF / bitrate / QP constant, interval de keyframe, parametri expert x264/x265"],
         ["Formate", "QuickTime, MP4 și MKV ale lui Resolve + GDC QuickTime, GDC MP4, GDC Matroska"],
-        ["Platforme", "macOS pe Apple Silicon (arm64); Windows 64-bit"],
+        ["Platforme", "macOS pe Apple Silicon (arm64), minim macOS 26 declarat de build, verificat pe macOS 27. Windows nu face parte din ediția 1.8.0."],
         ["Dependențe", "Niciuna de instalat: FFmpeg și bibliotecile necesare sunt incluse în pachet"],
     ], widths: [0.24, 0.76]),
     .note(.info, "Acest document descrie ce face pluginul, cum funcționează și cum îl configurezi pentru destinații concrete. Capitolul 14 spune explicit ce a fost verificat în DaVinci Resolve și ce nu a fost încă testat."),
@@ -63,12 +63,12 @@ private func ch2() -> [Block] { [
     .table(headers: ["Cerință", "Detalii"], rows: [
         ["DaVinci Resolve", "Versiunea **Studio** (SDK-ul de plugin-uri de export funcționează în Studio). Verificat pe Studio 21.1."],
         ["Mac", "macOS pe **Apple Silicon** (M1/M2/M3/M4...). Mac-urile Intel nu sunt ținta acestei versiuni."],
-        ["Windows", "Windows 10/11, 64-bit. Codarea hardware NVENC necesită GPU NVIDIA și driver actual."],
+        ["Windows", "Nu face parte din ediția 1.8.0 și nu a fost verificat; contribuțiile sunt binevenite. Codarea hardware NVENC ar cere GPU NVIDIA și driver actual."],
         ["Linux", "Nu este oferit."],
         ["Instalare Mac", "Pachet `.pkg` semnat și notarizat de Apple, instalat cu dublu-clic în folderul IOPlugins al lui Resolve."],
         ["Instalare Windows", "Arhivă cu script de instalare; copiază pluginul în folderul IOPlugins al lui Resolve."],
         ["Dependențe", "FFmpeg și bibliotecile necesare sunt incluse în pachet; nu trebuie instalat nimic separat."],
-        ["Licență", "Cod de activare legat de Machine ID (vezi capitolul 3.6)."],
+        ["Licență", "Gratuit, cu sursă deschisă: fără activare, cont sau donație obligatorie (vezi capitolul 3.6)."],
     ], widths: [0.24, 0.76]),
 ] }
 
@@ -104,8 +104,8 @@ private func ch3() -> [Block] { [
         "**Formatele lui Resolve** (QuickTime, MP4, MKV): Resolve împachetează fișierul și se ocupă de tot sunetul (PCM, AAC etc.). Codecurile GDC apar aici ca alegere de codec. Containerul Resolve **nu scrie** metadata HDR10 în container; ea rămâne în fluxul video.",
         "**Formatele GDC** (GDC QuickTime, GDC MP4, GDC Matroska): pluginul împachetează fișierul. Scrie etichetele de culoare, **mastering display** și **MaxCLL/MaxFALL** direct în container, iar sunetul este **PCM** necomprimat.",
     ]),
-    .h2("3.6 Licențierea"),
-    .p("Pluginul necesită un **cod de activare** legat de **Machine ID**-ul calculatorului (afișat în panoul plugin-ului). Codul se introduce o singură dată; după activare, câmpul dispare din panou. Verificarea se face local, fără conexiune la internet. Activarea se obține prin susținerea proiectului printr-o donație. Fără licență activă, exportul nu pornește."),
+    .h2("3.6 Licența și distribuția"),
+    .p("Ediția 1.8.0 pentru macOS este **gratuită** și cu **sursă deschisă**: nu cere cod de activare, Machine ID, cont, perioadă de probă sau donație. Codul pluginului este sub licență MIT; pachetul pentru Mac include FFmpeg, x264 și x265 și se distribuie sub GPLv3, cu textele licențelor și oferta de cod sursă în pachet."),
 ] }
 
 // ─────────────────────────── 4. Ce face / nu face ───────────────────────────
@@ -157,7 +157,7 @@ private func ch5() -> [Block] { [
         "**Sunet**: în formatele GDC doar PCM; în MP4 PCM are suport slab în unele playere.",
         "**Compatibilitatea redării**: H.264 pe 10 biți și 4:2:2 nu sunt redate de multe televizoare și telefoane; H.265 nu e acceptat peste tot.",
         "**Fără timecode și markere** în formatele GDC.",
-        "**Necesită Resolve Studio** și licență activată.",
+        "**Necesită Resolve Studio** (versiunea gratuită Resolve nu încarcă pluginuri de export).",
         "**Nu acoperă** livrările care cer ProRes, DNxHR, XDCAM sau DCP; acestea rămân la codecurile native.",
     ]),
     .h2("5.3 Când să NU folosești pluginul"),

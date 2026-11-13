@@ -29,7 +29,7 @@ private func es1() -> [Block] { [
         ["HDR", "HDR10 estático: mastering display, MaxCLL, MaxFALL (en el flujo y, en los formatos GDC, en el contenedor)"],
         ["Controles", "Preset, Profile, Level, Tune, CRF / bitrate / QP constante, intervalo de fotograma clave, parámetros expertos x264/x265"],
         ["Formatos", "QuickTime, MP4 y MKV de Resolve + GDC QuickTime, GDC MP4, GDC Matroska"],
-        ["Plataformas", "macOS en Apple Silicon (arm64); Windows de 64 bits"],
+        ["Plataformas", "macOS en Apple Silicon (arm64), mínimo macOS 26 declarado por el build, verificado en macOS 27. Windows no forma parte de la edición 1.8.0."],
         ["Dependencias", "Nada que instalar: FFmpeg y las bibliotecas necesarias vienen incluidos en el paquete"],
     ], widths: [0.24, 0.76]),
     .note(.info, "Este documento describe qué hace el plugin, cómo funciona y cómo configurarlo para destinos concretos. El capítulo 14 indica explícitamente qué se ha verificado en DaVinci Resolve y qué aún no se ha probado."),
@@ -60,12 +60,12 @@ private func es2() -> [Block] { [
     .table(headers: ["Requisito", "Detalles"], rows: [
         ["DaVinci Resolve", "Versión **Studio** (el SDK de plugins de exportación funciona en Studio). Verificado en Studio 21.1."],
         ["Mac", "macOS en **Apple Silicon** (M1/M2/M3/M4...). Los Mac Intel no son el objetivo de esta versión."],
-        ["Windows", "Windows 10/11, de 64 bits. La codificación por hardware NVENC requiere GPU NVIDIA y un controlador actual."],
+        ["Windows", "No forma parte de la edición 1.8.0 y no se ha verificado; se aceptan contribuciones. La codificación por hardware NVENC requeriría GPU NVIDIA y un controlador actual."],
         ["Linux", "No se ofrece."],
         ["Instalación en Mac", "Paquete `.pkg` firmado y notarizado por Apple, que se instala con doble clic en la carpeta IOPlugins de Resolve."],
         ["Instalación en Windows", "Archivo con script de instalación; copia el plugin en la carpeta IOPlugins de Resolve."],
         ["Dependencias", "FFmpeg y las bibliotecas necesarias están incluidos en el paquete; no hay que instalar nada más."],
-        ["Licencia", "Código de activación vinculado al Machine ID (véase el capítulo 3.6)."],
+        ["Licencia", "Gratuita y de código abierto: sin activación, cuenta ni donación obligatoria (véase el capítulo 3.6)."],
     ], widths: [0.24, 0.76]),
 ] }
 
@@ -100,8 +100,8 @@ private func es3() -> [Block] { [
         "**Los formatos de Resolve** (QuickTime, MP4, MKV): Resolve empaqueta el archivo y se ocupa de todo el audio (PCM, AAC, etc.). Los códecs GDC aparecen aquí como una opción de códec. El contenedor de Resolve **no escribe** los metadatos HDR10 en el contenedor; permanecen en el flujo de vídeo.",
         "**Los formatos GDC** (GDC QuickTime, GDC MP4, GDC Matroska): el plugin empaqueta el archivo. Escribe las etiquetas de color, el **mastering display** y **MaxCLL/MaxFALL** directamente en el contenedor, y el audio es **PCM** sin comprimir.",
     ]),
-    .h2("3.6 El licenciamiento"),
-    .p("El plugin requiere un **código de activación** vinculado al **Machine ID** del ordenador (que se muestra en el panel del plugin). El código se introduce una sola vez; tras la activación, el campo desaparece del panel. La verificación es local, sin conexión a internet. La activación se obtiene apoyando el proyecto mediante una donación. Sin una licencia activa, la exportación no se inicia."),
+    .h2("3.6 Licencia y distribución"),
+    .p("La edición 1.8.0 para macOS es **gratuita** y de **código abierto**: no pide código de activación, Machine ID, cuenta, periodo de prueba ni donación. El código del plugin tiene licencia MIT; el paquete para Mac incluye FFmpeg, x264 y x265 y se distribuye bajo GPLv3, con los textos de licencia y la oferta de código fuente dentro del paquete."),
 ] }
 
 private func es4() -> [Block] { [
@@ -151,7 +151,7 @@ private func es5() -> [Block] { [
         "**Audio**: solo PCM en los formatos GDC; el PCM en MP4 tiene poco soporte en algunos reproductores.",
         "**Compatibilidad de reproducción**: el H.264 en 10 bits y 4:2:2 no lo reproducen muchos televisores y teléfonos; el H.265 no se acepta en todas partes.",
         "**Sin timecode ni marcadores** en los formatos GDC.",
-        "**Requiere Resolve Studio** y una licencia activada.",
+        "**Requiere Resolve Studio** (la versión gratuita de Resolve no carga plugins de exportación).",
         "**No cubre** las entregas que exigen ProRes, DNxHR, XDCAM o DCP; esas siguen con los códecs nativos.",
     ]),
     .h2("5.3 Cuándo NO usar el plugin"),

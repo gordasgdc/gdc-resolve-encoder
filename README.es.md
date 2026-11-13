@@ -1,129 +1,69 @@
+<p align="center"><img src="docs/assets/social-preview.png" alt="GDC Resolve Encoder" width="720"></p>
+
 # GDC Resolve Encoder
 
-Codificador nativo y de código abierto para DaVinci Resolve Studio — H.264 y H.265 vía FFmpeg, con aceleración por hardware automática (Apple VideoToolbox en Mac, NVIDIA NVENC en Windows), además de variantes de 8 bits y 10 bits.
+[Română](README.md) · [English](README.en.md) · **Español** · [Página del producto](https://gordas.dev/gdc-resolve-encoder/es/)
 
-**Página de presentación**: https://gordasgdc.github.io/gdc-resolve-encoder/
-**Română**: [README.md](README.md) · **English**: [README.en.md](README.en.md)
+Plugin **gratuito y de código abierto** para **DaVinci Resolve Studio** en Mac: añade a Deliver encoders H.264 y H.265 completos, 10 bits, 4:2:2, HDR10 y tres contenedores propios (GDC QuickTime, GDC MP4, GDC Matroska).
 
-> Requiere **DaVinci Resolve Studio** — la edición gratuita no soporta IOPlugins.
+Sin cuenta, activación, periodo de prueba ni donación obligatoria: instalas y exportas.
 
-## Guía completa, en 3 idiomas
+## Descarga
 
-Cada archivo en [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) incluye una guía PDF completa (instalación, cada ajuste explicado con ejemplos, recetas prácticas, solución de problemas, licencias), en rumano, inglés y español. También disponibles directamente en [`docs/guides/`](docs/guides/).
+Última versión: [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) · paquete macOS `GDCResolveEncoder-<versión>.pkg` (firmado y notarizado, Apple Silicon, macOS 26+ declarado por el build, verificado en macOS 27). Funciona solo con DaVinci Resolve Studio; la versión gratuita de Resolve no carga plugins de exportación.
 
-## Qué registra el plugin
+1. Abre el `.pkg` con doble clic y sigue el instalador (pide la contraseña de tu Mac).
+2. Reinicia DaVinci Resolve.
+3. En **Deliver**: **Format** → GDC QuickTime / GDC MP4 / GDC Matroska, **Codec** → GDC Encoder, **Type** → la variante deseada.
 
-| Códec | Backend | Tipo | Profundidad | Plataformas |
-|---|---|---|---|---|
-| GDC H.264 | `libx264` | Software | 8 bits | Mac · Windows |
-| GDC H.265 | `libx265` | Software | 8 bits | Mac · Windows |
-| GDC H.264 | Apple VideoToolbox | Hardware | 8 bits | Mac (Apple Silicon) |
-| GDC H.265 | Apple VideoToolbox | Hardware | 8 bits | Mac (Apple Silicon) |
-| GDC H.264 | NVIDIA NVENC | Hardware | 8 bits | Windows (GPU NVIDIA) |
-| GDC H.265 | NVIDIA NVENC | Hardware | 8 bits | Windows (GPU NVIDIA) |
-| GDC H.264 10 bits | `libx264` (High10) | Software | 10 bits | Mac · Windows |
-| GDC H.265 10 bits | `libx265` (Main10) | Software | 10 bits | Mac · Windows |
+Guía PDF completa (RO · EN · ES): [`docs/guides/`](docs/guides/).
 
-Las variantes por hardware solo aparecen en la lista de códecs de Resolve **si** tu máquina puede ejecutarlas realmente — FFmpeg se comprueba al iniciar el plugin, no se asume. El modo de 10 bits está disponible actualmente solo por software.
+## Qué ofrece
 
-## Ajustes disponibles en el panel del plugin
+| Variante de Type | Encoder | Profundidad / croma |
+|---|---|---|
+| GDC H.264 / H.265 (Software) | x264 / x265 | 8 bits 4:2:0 |
+| GDC H.264 / H.265 (Apple VideoToolbox) | hardware | 8 bits 4:2:0 |
+| GDC H.264 / H.265 10-bit | x264 High10 / x265 Main10 | 10 bits 4:2:0 |
+| GDC H.264 / H.265 4:2:2 10-bit | x264 High 4:2:2 / x265 Main 4:2:2 10 | 10 bits 4:2:2 |
 
-- **Preset** — velocidad vs eficiencia de compresión (ultrafast → veryslow)
-- **Rate Control** — Calidad Constante (CRF), Bitrate objetivo, o QP Constante
-- **Profile** — baseline/main/high (solo H.264 8 bits software)
-- **Level** — 3.0-5.2 o Auto (H.264/H.265 software)
-- **Keyframe Interval** — distancia entre keyframes, en segundos
-- **Advanced Params** — parámetros x264/x265 directos (experto), ej. `aq-mode=3:psy-rd=1.0,0.15`
-- **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (la lista difiere ligeramente entre H.264 y H.265, verificada directamente contra cada codificador)
+- Calidad constante (CRF), bitrate objetivo o QP constante; preset, tune, nivel, intervalo de fotogramas clave, parámetros avanzados de x264/x265.
+- **HDR10**: mastering display y MaxCLL/MaxFALL, en el flujo de vídeo y en el contenedor (exportaciones PQ).
+- Etiquetas de color escritas en el archivo; audio PCM sin cambios.
+- Las variantes por hardware aparecen solo si tu Mac puede ejecutarlas.
 
-Cada ajuste, con ejemplos concretos de cuándo y cómo usarlo, está explicado en detalle en la guía PDF.
+## Verificado
 
-## Instalación
+Edición 1.8.0, DaVinci Resolve Studio 21.2, Mac con Apple Silicon, material de cámara de cine, 17 exportaciones (clips completos y una secuencia de varios clips, con sonido): PSNR mínimo de 40,6 dB frente al original, fotogramas contados correctamente, sonido sincronizado (desfase 0) e idéntico al original salvo los fundidos en los bordes de los clips, etiquetas de color y HDR10 presentes, reimportación sin errores. Los scripts de verificación están en [`tests/`](tests/).
 
-Descarga el archivo para tu plataforma desde [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest).
+## Windows
 
-> **Sobre FFmpeg**: las librerías de FFmpeg necesarias ya vienen incluidas en el archivo, tanto en **Mac** como en **Windows** — no hay que instalar nada extra.
+**Windows — última versión estable publicada: [v1.7.0](https://github.com/gordasgdc/gdc-resolve-encoder/releases/tag/v1.7.0).** El desarrollo y las pruebas para Windows están suspendidos porque ya no dispongo de un sistema Windows para verificar. La versión existente sigue disponible para descargar. Se agradecen las contribuciones para continuar el soporte de Windows.
 
-### macOS (Apple Silicon)
-
-Lo más sencillo: en la carpeta descomprimida, ejecuta:
-```bash
-./install.sh
-```
-El script elimina el indicador de cuarentena de macOS y copia el plugin a la ubicación correcta (FFmpeg ya viene incluido en el paquete). Pide tu contraseña una sola vez.
-
-Instalación manual, si lo prefieres:
-```bash
-xattr -rd com.apple.quarantine gdc_resolve_encoder.dvcp.bundle
-mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/"
-```
-
-### Windows
-
-No necesitas FFmpeg por separado — los DLL necesarios ya vienen en el archivo.
-
-Lo más simple: en la carpeta descomprimida, ejecuta `install.bat` (doble clic) — coloca el paquete en la carpeta correcta automáticamente, pidiendo permisos de Administrador si hace falta.
-
-Manual, si prefieres: mueve la carpeta completa `gdc_resolve_encoder.dvcp.bundle` (la carpeta entera, no solo el archivo interior) a:
-```
-%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\
-```
+- Descarga directa: [`gdc-resolve-encoder-windows-x64.zip`](https://github.com/gordasgdc/gdc-resolve-encoder/releases/download/v1.7.0/gdc-resolve-encoder-windows-x64.zip) (50,2 MB, SHA-256 `785d1dc93e3c8085c7ae29b0b6a405ffc4e1384cf6735e09163ed187ed44d5f2`). El enlace sigue siendo válido cuando 1.8.0 pase a ser «Latest».
+- Instalación: descomprime y ejecuta `install.bat` con doble clic: copia `gdc_resolve_encoder.dvcp.bundle` a `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\` y pide por sí mismo permisos de administrador. Reinicia DaVinci Resolve Studio. NVENC requiere una tarjeta NVIDIA con un controlador actual.
+- **Condiciones de uso (difieren de la edición gratuita para macOS):** v1.7.0 requiere un código de activación vinculado al Machine ID, y el apoyo al proyecto se hace únicamente como donación; los términos y la guía dentro del archivo describen esas condiciones. La edición 1.8.0 para macOS no pide activación, cuenta, periodo de prueba ni donación.
 
 
-## Cómo se usa
-
-1. Página **Deliver**, como en cualquier exportación normal
-2. Elige el formato **MP4** o **QuickTime**
-3. Los códecs **GDC** aparecen en la lista de códecs, junto a los nativos
-4. Los ajustes aparecen directamente en el panel de exportación (Plugin Settings)
-
-## Requisitos
-
-- **DaVinci Resolve Studio** (la edición gratuita no soporta IOPlugins)
-- **macOS Apple Silicon** o Windows de 64 bits — los Mac Intel no son compatibles
-- Para NVENC: una GPU **NVIDIA** con driver actualizado
-
-## Estructura correcta del bundle
-
-```
-gdc_resolve_encoder.dvcp.bundle/
-└── Contents/
-    ├── MacOS/              (solo Mac)
-    │   └── gdc_resolve_encoder.dvcp
-    └── Win64/               (solo Windows)
-        └── gdc_resolve_encoder.dvcp
-```
-
-Cada archivo en [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) contiene el bundle completo, ya estructurado correctamente, para esa plataforma — no requiere montaje manual.
-
-## Compilar desde el código fuente
-
-Consulta [`.github/workflows/build.yml`](.github/workflows/build.yml) para los pasos exactos usados en cada release; resumen:
+## Compilar desde el código fuente (macOS)
 
 ```bash
-# macOS (solo arm64)
-brew install cmake pkg-config ffmpeg
+brew install cmake pkg-config ffmpeg dylibbundler
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
 cmake --build build -j
-
-# Windows (necesita un build de desarrollo de FFmpeg, ej. gyan.dev)
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DFFMPEG_ROOT="C:\path\to\ffmpeg"
-cmake --build build --config Release
+./bundle_ffmpeg_mac.sh <bundle> gdc_resolve_encoder.dvcp   # copia FFmpeg y sus dependencias al bundle
 ```
 
-## Limitaciones conocidas
+El `.pkg` se construye con `./build_installer.sh <versión>`. Pruebas que no necesitan Resolve: `cmake --build build --target pixconv_test mux_roundtrip` y después `tests/run_mux_tests.sh`.
 
-- Sin soporte HDR (metadatos PQ/HLG) por ahora — previsto para una versión futura
-- El modo de 10 bits solo está disponible por software (x264/x265), no por hardware
-- Sin renderizado multi-pasada — solo una pasada actualmente
-- El CRF en codificadores por hardware (VideoToolbox/NVENC) cae automáticamente a un bitrate fijo, no a una calidad constante real — el hardware no expone CRF igual que x264/x265
+## Contribuciones
+
+Se aceptan Issues y Pull Requests, sobre todo para Windows; consulta [CONTRIBUTING.md](CONTRIBUTING.md). El proyecto tiene mantenimiento ocasional.
 
 ## Licencia
 
-MIT para el código propio del plugin — ver [LICENSE](LICENSE). Construido sobre el DaVinci Resolve IO Encode Plugin SDK (Blackmagic Design), redistribuido conforme a los requisitos del SDK (`include/`, `wrapper/`). No afiliado con Blackmagic Design.
-
-El plugin enlaza con librerías licenciadas bajo **GPL** (FFmpeg, libx264, libx265) — el binario compilado está, como distribución, sujeto a los términos GPL. Detalles completos, con implicaciones, en [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Código del plugin: MIT ([LICENSE](LICENSE)). El paquete para Mac incluye FFmpeg, x264 y x265 y se distribuye bajo **GPLv3**; los textos de licencia, la oferta de código fuente y la lista de bibliotecas están en [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) y [`legal/`](legal/), y dentro del paquete (`Contents/Resources/Licenses`). Construido sobre el DaVinci Resolve IO Encode Plugin SDK (Blackmagic Design), redistribuido según exige el SDK. Proyecto independiente: no está desarrollado, aprobado ni respaldado por Blackmagic Design.
 
 ## Autor
 
-**Cristi Gordas (GDC)** — [GitHub](https://github.com/gordasgdc) · [Facebook](https://web.facebook.com/cristiGDC) · [YouTube](https://www.youtube.com/@cristigordas)
+**Dumitru Cristinel Gordas (GDC)** · [GitHub](https://github.com/gordasgdc) · [YouTube](https://www.youtube.com/@cristigordas)

@@ -1,132 +1,69 @@
+<p align="center"><img src="docs/assets/social-preview.png" alt="GDC Resolve Encoder" width="720"></p>
+
 # GDC Resolve Encoder
 
-Encoder nativ, open-source, pentru DaVinci Resolve Studio — H.264 și H.265 prin FFmpeg, cu accelerare hardware automată (Apple VideoToolbox pe Mac, NVIDIA NVENC pe Windows), plus variante 8-bit și 10-bit.
+**Română** · [English](README.en.md) · [Español](README.es.md) · [Pagina produsului](https://gordas.dev/gdc-resolve-encoder/)
 
-**Pagina de prezentare**: https://gordasgdc.github.io/gdc-resolve-encoder/
-**English**: [README.en.md](README.en.md) · **Español**: [README.es.md](README.es.md)
+Plugin **gratuit și cu sursă deschisă** pentru **DaVinci Resolve Studio** pe Mac: adaugă în Deliver encodere H.264 și H.265 complete, 10-bit, 4:2:2, HDR10 și trei containere proprii (GDC QuickTime, GDC MP4, GDC Matroska).
 
-> Necesită **DaVinci Resolve Studio** — versiunea gratuită nu suportă IOPlugins.
+Fără cont, activare, perioadă de probă sau donație obligatorie: instalezi și exporți.
 
-## Ghid complet, în 3 limbi
+## Descărcare
 
-Fiecare arhivă din [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) include și un ghid PDF complet (instalare, fiecare setare explicată cu exemple, rețete practice, depanare, licențe), în română, engleză și spaniolă. Le găsești și direct în [`docs/guides/`](docs/guides/).
+Ultima versiune: [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) · pachet macOS `GDCResolveEncoder-<versiune>.pkg` (semnat și notarizat, Apple Silicon, macOS 26+ declarat de build, verificat pe macOS 27). Funcționează numai cu DaVinci Resolve Studio; versiunea gratuită Resolve nu încarcă pluginuri de export.
 
-## Ce înregistrează plugin-ul
+1. Deschide pachetul `.pkg` cu dublu-clic și urmează pașii (cere parola Mac-ului).
+2. Repornește DaVinci Resolve.
+3. În **Deliver**: **Format** → GDC QuickTime / GDC MP4 / GDC Matroska, **Codec** → GDC Encoder, **Type** → varianta dorită.
 
-| Codec | Backend | Tip | Adâncime | Platforme |
-|---|---|---|---|---|
-| GDC H.264 | `libx264` | Software | 8-bit | Mac · Windows |
-| GDC H.265 | `libx265` | Software | 8-bit | Mac · Windows |
-| GDC H.264 | Apple VideoToolbox | Hardware | 8-bit | Mac (Apple Silicon) |
-| GDC H.265 | Apple VideoToolbox | Hardware | 8-bit | Mac (Apple Silicon) |
-| GDC H.264 | NVIDIA NVENC | Hardware | 8-bit | Windows (cu placă NVIDIA) |
-| GDC H.265 | NVIDIA NVENC | Hardware | 8-bit | Windows (cu placă NVIDIA) |
-| GDC H.264 10-bit | `libx264` (High10) | Software | 10-bit | Mac · Windows |
-| GDC H.265 10-bit | `libx265` (Main10) | Software | 10-bit | Mac · Windows |
+Ghid PDF complet (RO · EN · ES): [`docs/guides/`](docs/guides/).
 
-Variantele hardware apar în lista de codecuri din Resolve **doar** dacă mașina ta le poate rula efectiv — FFmpeg e verificat la pornirea plugin-ului, nu presupus. 10-bit e disponibil momentan doar pe variantele software.
+## Ce oferă
 
-## Setări disponibile în panoul plugin-ului
+| Variantă din Type | Encoder | Adâncime / crominanță |
+|---|---|---|
+| GDC H.264 / H.265 (Software) | x264 / x265 | 8-bit 4:2:0 |
+| GDC H.264 / H.265 (Apple VideoToolbox) | hardware | 8-bit 4:2:0 |
+| GDC H.264 / H.265 10-bit | x264 High10 / x265 Main10 | 10-bit 4:2:0 |
+| GDC H.264 / H.265 4:2:2 10-bit | x264 High 4:2:2 / x265 Main 4:2:2 10 | 10-bit 4:2:2 |
 
-- **Preset** — viteză vs eficiența compresiei (ultrafast → veryslow)
-- **Rate Control** — Constant Quality (CRF), Target Bitrate, sau Constant QP
-- **Profile** — baseline/main/high (doar H.264 8-bit software)
-- **Level** — 3.0-5.2 sau Auto (H.264/H.265 software)
-- **Keyframe Interval** — distanța dintre keyframe-uri, în secunde
-- **Advanced Params** — parametri x264/x265 direcți (expert), ex. `aq-mode=3:psy-rd=1.0,0.15`
-- **Tune** — film, animation, grain, stillimage, psnr, ssim, fastdecode, zerolatency (lista diferă ușor între H.264 și H.265, verificată direct față de fiecare encoder)
+- Calitate constantă (CRF), bitrate țintă sau QP constant; preset, tune, level, keyframe interval, parametri avansați x264/x265.
+- **HDR10**: mastering display și MaxCLL/MaxFALL, în fluxul video și în container (exporturi PQ).
+- Etichete de culoare scrise în fișier; sunet PCM scris neschimbat.
+- Variantele hardware apar doar dacă Mac-ul tău le poate rula.
 
-Fiecare setare, cu exemple concrete de când și cum s-o folosești, e explicată detaliat în ghidul PDF.
+## Verificat
 
-## Instalare
+Ediția 1.8.0, DaVinci Resolve Studio 21.2, Mac cu Apple Silicon, material de cameră de cinema, 17 exporturi (clipuri întregi și o secvență cu mai multe clipuri, cu sunet): PSNR minim 40,6 dB față de sursă, cadre numărate corect, sunet sincron (decalaj 0) și identic cu sursa în afara fade-urilor de la marginea clipurilor, etichete de culoare și HDR10 prezente, reimport fără erori. Scripturile de verificare sunt în [`tests/`](tests/).
 
-Descarcă arhiva pentru platforma ta din [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest).
+## Windows
 
-> **Despre FFmpeg**: bibliotecile FFmpeg necesare vin deja incluse în arhivă, atât pe **Mac** cât și pe **Windows** — nu trebuie să instalezi nimic în plus.
+**Windows — ultima versiune stabilă publicată: [v1.7.0](https://github.com/gordasgdc/gdc-resolve-encoder/releases/tag/v1.7.0).** Dezvoltarea și testarea pentru Windows sunt suspendate deoarece nu mai am un sistem Windows disponibil pentru verificări. Versiunea existentă rămâne disponibilă pentru descărcare. Contribuțiile pentru continuarea suportului Windows sunt binevenite.
 
-### macOS (Apple Silicon)
+- Descărcare directă: [`gdc-resolve-encoder-windows-x64.zip`](https://github.com/gordasgdc/gdc-resolve-encoder/releases/download/v1.7.0/gdc-resolve-encoder-windows-x64.zip) (50,2 MB, SHA-256 `785d1dc93e3c8085c7ae29b0b6a405ffc4e1384cf6735e09163ed187ed44d5f2`). Linkul rămâne valid și după ce 1.8.0 devine „Latest”.
+- Instalare: dezarhivează, apoi rulează `install.bat` (dublu-clic): copiază `gdc_resolve_encoder.dvcp.bundle` în `%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\`, cerând singur drepturi de administrator. Repornește DaVinci Resolve Studio. NVENC cere placă NVIDIA cu driver actual.
+- **Condiții de utilizare (diferă de ediția gratuită macOS):** v1.7.0 necesită un cod de activare legat de Machine ID, iar susținerea proiectului se face exclusiv ca donație; termenii și ghidul din arhivă descriu acele condiții. Ediția macOS 1.8.0 nu cere activare, cont, perioadă de probă sau donație.
 
-**Recomandat**: un instalator `.pkg` semnat + notarizat de Apple (dublu-clic, cu pas de acceptare a licenței, fără Terminal) — construit local cu `./build_installer.sh <versiune>` (necesită certificat Developer ID configurat, vezi `codesigning/README.md`). Nu e încă publicat automat pe fiecare release GitHub — TODO.
 
-Alternativ, arhiva de pe [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) include `install.sh` (Terminal):
-
-Cel mai simplu: în folderul dezarhivat, rulează:
-```bash
-./install.sh
-```
-Scriptul elimină carantina macOS și copiază plugin-ul la locul corect (FFmpeg vine deja inclus în bundle). Cere parola o singură dată.
-
-Manual, dacă preferi:
-```bash
-xattr -rd com.apple.quarantine gdc_resolve_encoder.dvcp.bundle
-mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/"
-```
-
-### Windows
-
-Nu ai nevoie de FFmpeg separat — DLL-urile necesare vin deja în arhivă.
-
-Cel mai simplu: în folderul dezarhivat, rulează `install.bat` (dublu-clic) — pune singur bundle-ul în folderul corect, cerând automat drepturi de Administrator dacă e nevoie.
-
-Manual, dacă preferi: mută folderul `gdc_resolve_encoder.dvcp.bundle` (întreg, nu doar fișierul din interior) în:
-```
-%ProgramData%\Blackmagic Design\DaVinci Resolve\Support\IOPlugins\
-```
-
-## Cum se folosește
-
-1. Pagina **Deliver**, ca la orice export normal
-2. Alege formatul **MP4** sau **QuickTime**
-3. Codecurile **GDC** apar în lista de codecuri, alături de cele native
-4. Setările apar direct în panoul de export (Plugin Settings)
-
-## Cerințe
-
-- **DaVinci Resolve Studio** (versiunea gratuită nu suportă IOPlugins)
-- **macOS Apple Silicon** sau Windows 64-bit — Mac Intel nu e suportat
-- Pentru NVENC: placă video **NVIDIA** cu driver actualizat
-
-## Structura corectă a bundle-ului
-
-```
-gdc_resolve_encoder.dvcp.bundle/
-└── Contents/
-    ├── MacOS/              (doar pe Mac)
-    │   └── gdc_resolve_encoder.dvcp
-    └── Win64/               (doar pe Windows)
-        └── gdc_resolve_encoder.dvcp
-```
-
-Fiecare arhivă de pe [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) conține bundle-ul complet, deja structurat corect, pentru platforma respectivă — nu trebuie construit manual.
-
-## Construire din sursă
-
-Vezi [`.github/workflows/build.yml`](.github/workflows/build.yml) pentru pașii exacți folosiți la fiecare release; rezumat:
+## Construire din sursă (macOS)
 
 ```bash
-# macOS (doar arm64)
-brew install cmake pkg-config ffmpeg
+brew install cmake pkg-config ffmpeg dylibbundler
 cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
 cmake --build build -j
-
-# Windows (necesita FFmpeg shared dev build, ex. gyan.dev)
-cmake -B build -DCMAKE_BUILD_TYPE=Release -DFFMPEG_ROOT="C:\path\to\ffmpeg"
-cmake --build build --config Release
+./bundle_ffmpeg_mac.sh <bundle> gdc_resolve_encoder.dvcp   # copiază FFmpeg și dependențele în bundle
 ```
 
-## Limitări cunoscute
+Pachetul `.pkg` se construiește cu `./build_installer.sh <versiune>`. Teste fără Resolve: `cmake --build build --target pixconv_test mux_roundtrip`, apoi `tests/run_mux_tests.sh`.
 
-- Fără suport HDR (metadate PQ/HLG) momentan — planificat pentru o versiune viitoare
-- 10-bit disponibil doar pe variantele software (x264/x265), nu și hardware
-- Fără randare multi-pass — o singură trecere momentan
-- CRF pe encoderele hardware (VideoToolbox/NVENC) cade automat pe un bitrate fix, nu o calitate constantă reală — hardware-ul nu expune CRF la fel ca x264/x265
+## Contribuții
+
+Issues și Pull Requests sunt binevenite, mai ales pentru Windows; vezi [CONTRIBUTING.md](CONTRIBUTING.md). Proiectul are mentenanță ocazională.
 
 ## Licență
 
-MIT pentru codul propriu — vezi [LICENSE](LICENSE). Construit pe DaVinci Resolve IO Encode Plugin SDK (Blackmagic Design), redistribuit conform cerințelor SDK-ului (`include/`, `wrapper/`). Nu este afiliat cu Blackmagic Design.
-
-Plugin-ul leagă (links) librării licențiate **GPL** (FFmpeg, libx264, libx265) — binarul compilat este, ca distribuție, supus condițiilor GPL. Detalii complete, cu implicații, în [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md).
+Codul pluginului: MIT ([LICENSE](LICENSE)). Pachetul pentru Mac include FFmpeg, x264 și x265 și se distribuie sub **GPLv3**; textele licențelor, oferta de cod sursă și lista bibliotecilor sunt în [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) și [`legal/`](legal/), și în pachet (`Contents/Resources/Licenses`). Construit pe DaVinci Resolve IO Encode Plugin SDK (Blackmagic Design), redistribuit conform cerințelor SDK-ului. Proiect independent: nu este dezvoltat, aprobat sau susținut de Blackmagic Design.
 
 ## Autor
 
-**Cristi Gordas (GDC)** — [GitHub](https://github.com/gordasgdc) · [Facebook](https://web.facebook.com/cristiGDC) · [YouTube](https://www.youtube.com/@cristigordas)
+**Dumitru Cristinel Gordas (GDC)** · [GitHub](https://github.com/gordasgdc) · [YouTube](https://www.youtube.com/@cristigordas)

@@ -382,7 +382,7 @@ func ch13() -> [Block] { [
     .h1("13. Depanare"),
     .table(headers: ["Problemă", "Cauze probabile", "Rezolvare"], rows: [
         ["Nu văd codecurile sau formatele GDC în Deliver", "Pluginul nu e instalat; Resolve nu a fost repornit; ai versiunea Free, nu Studio; sistem neacceptat", "Reinstalează pachetul; închide Resolve, așteaptă cel puțin 20 secunde, apoi redeschide-l; verifică versiunea Studio"],
-        ["Exportul nu pornește", "Licență neactivată; Advanced Params invalid; lățime sau înălțime impară", "Introdu codul de activare; golește Advanced Params; folosește dimensiuni pare"],
+        ["Exportul nu pornește", "Advanced Params invalid; lățime sau înălțime impară", "Golește Advanced Params; folosește dimensiuni pare"],
         ["Imaginea pare spălată sau prea contrastată", "Data Levels pe Full pentru un fișier SDR; Output Color Space greșit", "Data Levels: Video; verifică Output Color Space"],
         ["HDR-ul arată spălat pe un ecran SDR", "Comportament normal: ecranul nu face tone mapping", "Verifică pe un ecran HDR real; pentru SDR livrează o versiune separată"],
         ["Bandă (banding) în cer sau degradeuri", "Cuantizare pe 8 biți; CRF prea mare", "Folosește varianta 10-bit; scade CRF; adaugă `aq-mode=3`; adaugă puțin grăunte în Resolve"],

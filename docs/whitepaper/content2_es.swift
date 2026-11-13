@@ -375,7 +375,7 @@ func es13() -> [Block] { [
     .h1("13. Resolución de problemas"),
     .table(headers: ["Problema", "Causas probables", "Solución"], rows: [
         ["No veo los códecs o formatos GDC en Deliver", "Plugin no instalado; Resolve no reiniciado; tienes la versión Free, no Studio; sistema no admitido", "Reinstala el paquete; cierra Resolve, espera al menos 20 segundos y vuelve a abrirlo; comprueba que es la versión Studio"],
-        ["La exportación no se inicia", "Licencia sin activar; Advanced Params no válido; ancho o alto impares", "Introduce el código de activación; vacía Advanced Params; usa dimensiones pares"],
+        ["La exportación no se inicia", "Advanced Params no válido; ancho o alto impares", "Vacía Advanced Params; usa dimensiones pares"],
         ["La imagen parece deslavada o demasiado contrastada", "Data Levels en Full para un archivo SDR; Output Color Space incorrecto", "Data Levels: Video; comprueba Output Color Space"],
         ["El HDR se ve deslavado en una pantalla SDR", "Comportamiento normal: la pantalla no hace tone mapping", "Comprueba en una pantalla HDR real; para SDR entrega una versión aparte"],
         ["Banding en el cielo o en los degradados", "Cuantización de 8 bits; CRF demasiado alto", "Usa la variante de 10 bits; baja el CRF; añade `aq-mode=3`; añade algo de grano en Resolve"],

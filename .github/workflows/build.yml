@@ -1,5 +1,16 @@
 name: Build GDC Resolve Encoder
 
+# The macOS package (GDCResolveEncoder-<version>.pkg) is built, signed and
+# notarized locally with the Developer ID certificates (they are not in CI),
+# together with the corresponding-source archive (scripts/make_corresponding_source.sh).
+# On a v* tag this workflow therefore (1) checks that the tagged source builds and
+# its tests pass, and (2) creates a DRAFT release with the notes from CHANGELOG.md.
+# The verified package and the source archive are attached afterwards by
+# scripts/publish_release.sh, which checks their SHA-256 before publishing, so the
+# "latest" release never exists without the package. Windows development is
+# suspended: no new Windows package is built or attached (the last published one,
+# v1.7.0, stays available); the Windows job runs only on manual dispatch.
+
 on:
   push:
     tags: ["v*"]
@@ -9,156 +20,60 @@ env:
   PLUGIN_NAME: gdc_resolve_encoder
 
 jobs:
-  # Linux scos din lansari incepand cu v1.5.0 - cerut explicit de Cristi
-  # (2026-09-04). Vezi CLAUDE.md pentru motiv/detalii; jobul build-linux a
-  # fost eliminat complet, nu doar dezactivat, ca sa nu ramana cod mort.
-  # ───────────────────────────────────────────────────────── macOS (arm64) ──
-  build-macos:
-    runs-on: macos-14 # Apple Silicon runner
+  # Build + unit tests of the tagged source (not the shipped package: the CI runner
+  # has an older SDK, so it builds with a lower deployment target).
+  check-macos:
+    runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
-
       - name: Install build deps (Homebrew)
-        run: |
-          brew install cmake pkg-config ffmpeg dylibbundler
-
+        run: brew install cmake pkg-config ffmpeg
       - name: Configure
-        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64
-
+        run: cmake -B build -DCMAKE_BUILD_TYPE=Release -DCMAKE_OSX_ARCHITECTURES=arm64 -DCMAKE_OSX_DEPLOYMENT_TARGET=14.0
       - name: Build
         run: cmake --build build --config Release -j
-
-      - name: Package (macOS arm64-only bundle)
+      - name: Unit tests (pixel conversion, containers)
         run: |
-          BUNDLE="${{ env.PLUGIN_NAME }}.dvcp.bundle/Contents/MacOS"
-          mkdir -p "$BUNDLE"
-          cp build/${{ env.PLUGIN_NAME }}.dvcp "$BUNDLE/"
+          cmake --build build --target pixconv_test mux_roundtrip -j
+          ./build/pixconv_test
+          tests/run_mux_tests.sh ./build/mux_roundtrip "$RUNNER_TEMP/mux"
 
-          # Bundleaza FFmpeg + dependinte tranzitive direct in bundle, ca
-          # plugin-ul sa nu mai depinda de FFmpeg-ul Homebrew al userului
-          # final la runtime (fix SONAME mismatch, vezi CLAUDE.md).
-          ./bundle_ffmpeg_mac.sh "${{ env.PLUGIN_NAME }}.dvcp.bundle" "${{ env.PLUGIN_NAME }}.dvcp"
-          codesign --force --sign - "$BUNDLE/${{ env.PLUGIN_NAME }}.dvcp"
-
-          # dlopen smoke test on the BUNDLED plugin (fails the build if the
-          # dylibs in Contents/Frameworks don't resolve, SONAME-mismatch class).
-          python3 tests/check_load.py "$BUNDLE/${{ env.PLUGIN_NAME }}.dvcp"
-
-          mkdir -p dist_mac
-          cp -R "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_mac/
-          cp install.sh dist_mac/
-          chmod +x dist_mac/install.sh
-          cp docs/guides/*.pdf dist_mac/
-
-          printf '%s\n' \
-            'GDC Resolve Encoder - instalare pe Mac' \
-            '=======================================' \
-            '' \
-            'CEL MAI SIMPLU: deschide Terminal in acest folder si ruleaza:' \
-            '' \
-            '    ./install.sh' \
-            '' \
-            'Scriptul elimina carantina macOS si copiaza pluginul la locul corect' \
-            '(FFmpeg vine deja inclus in bundle, nu trebuie instalat separat).' \
-            'Iti va cere parola (sudo) o singura data, ca sa scrie in folderul de sistem.' \
-            '' \
-            'Dupa instalare, restart la DaVinci Resolve.' \
-            '' \
-            '------------------------------------------------------------------' \
-            'Manual, daca preferi:' \
-            '    xattr -rd com.apple.quarantine gdc_resolve_encoder.dvcp.bundle' \
-            '    mv gdc_resolve_encoder.dvcp.bundle "/Library/Application Support/Blackmagic Design/DaVinci Resolve/IOPlugins/"' \
-            > dist_mac/CITESTE-MA.txt
-
-          mkdir -p dist
-          cd dist_mac
-          zip -r "../dist/gdc-resolve-encoder-mac-arm64.zip" .
-          cd ..
-
-      - uses: actions/upload-artifact@v4
-        with:
-          retention-days: 1
-          name: gdc-resolve-encoder-mac-arm64
-          path: dist/gdc-resolve-encoder-mac-arm64.zip
-
-  # ───────────────────────────────────────────────────────────── Windows ──
+  # Manual dispatch only: Windows is not maintained; nothing here is attached to a release.
   build-windows:
+    if: github.event_name == 'workflow_dispatch'
     runs-on: windows-latest
-    continue-on-error: true  # o intrerupere temporara a gyan.dev nu trebuie sa blocheze lansarea Mac
+    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
-
       - name: Download FFmpeg shared dev build
         shell: pwsh
         run: |
-          $maxAttempts = 5
-          for ($i = 1; $i -le $maxAttempts; $i++) {
-            try {
-              Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg.7z
-              break
-            } catch {
-              Write-Host "Incercarea $i din $maxAttempts a esuat: $_"
-              if ($i -eq $maxAttempts) { throw }
-              Start-Sleep -Seconds (15 * $i)
-            }
-          }
+          Invoke-WebRequest -Uri "https://www.gyan.dev/ffmpeg/builds/ffmpeg-release-full-shared.7z" -OutFile ffmpeg.7z
           7z x ffmpeg.7z -offmpeg_extracted
           $dir = Get-ChildItem ffmpeg_extracted | Select-Object -First 1
           Move-Item $dir.FullName -Destination "${{ github.workspace }}\ffmpeg"
-          Get-ChildItem "${{ github.workspace }}\ffmpeg\include\libavcodec" | Select-Object -First 5
-
-      - name: Configure
+      - name: Configure and build
         run: |
           cmake -B build -DCMAKE_BUILD_TYPE=Release -DFFMPEG_ROOT="${{ github.workspace }}\ffmpeg"
+          cmake --build build --config Release -j
 
-      - name: Build
-        run: cmake --build build --config Release -j
-
-      - name: Package (Windows-only bundle)
-        shell: pwsh
-        run: |
-          $bundle = "${{ env.PLUGIN_NAME }}.dvcp.bundle\Contents\Win64"
-          New-Item -ItemType Directory -Force -Path $bundle
-          Copy-Item "build\Release\${{ env.PLUGIN_NAME }}.dvcp" $bundle
-          Copy-Item "ffmpeg\bin\avcodec-*.dll" $bundle
-          Copy-Item "ffmpeg\bin\avformat-*.dll" $bundle
-          Copy-Item "ffmpeg\bin\avutil-*.dll" $bundle
-          Copy-Item "ffmpeg\bin\swscale-*.dll" $bundle
-          Copy-Item "ffmpeg\bin\swresample-*.dll" $bundle
-
-          # LoadLibrary smoke test on the bundled plugin + its FFmpeg DLLs.
-          python tests\check_load.py "$bundle\${{ env.PLUGIN_NAME }}.dvcp"
-          if ($LASTEXITCODE -ne 0) { throw "check_load.py failed" }
-          New-Item -ItemType Directory -Force -Path dist_win
-          Copy-Item "${{ env.PLUGIN_NAME }}.dvcp.bundle" dist_win -Recurse
-          Copy-Item "docs\guides\*.pdf" dist_win
-          Copy-Item "install.ps1" dist_win
-          Copy-Item "install.bat" dist_win
-
-          New-Item -ItemType Directory -Force -Path dist
-          Compress-Archive -Path "dist_win\*" -DestinationPath "dist\gdc-resolve-encoder-windows-x64.zip"
-
-      - uses: actions/upload-artifact@v4
-        with:
-          retention-days: 1
-          name: gdc-resolve-encoder-windows-x64
-          path: dist/gdc-resolve-encoder-windows-x64.zip
-
-  # ──────────────────────────────────────────────────── GitHub Release ──
+  # Draft release with the notes for this version. Assets are added by scripts/publish_release.sh.
   release:
-    needs: [build-macos, build-windows]
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [check-macos]
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-      - uses: actions/download-artifact@v4
-        continue-on-error: true
-        with:
-          path: artifacts
-
-      - name: Create Release
+      - uses: actions/checkout@v4
+      - name: Extract the release notes from CHANGELOG.md
+        run: |
+          VER="${GITHUB_REF_NAME}"
+          awk -v v="## ${VER} " 'index($0, v)==1 {p=1; next} /^## /{p=0} p' CHANGELOG.md > notes.md
+          test -s notes.md || { echo "No CHANGELOG.md section for ${VER}"; exit 1; }
+      - name: Create draft release
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            artifacts/gdc-resolve-encoder-mac-arm64/*.zip
-            artifacts/gdc-resolve-encoder-windows-x64/*.zip
+          draft: true
+          body_path: notes.md
+          fail_on_unmatched_files: true
