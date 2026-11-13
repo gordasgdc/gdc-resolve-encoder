@@ -23,7 +23,7 @@ jobs:
   # Build + unit tests of the tagged source (not the shipped package: the CI runner
   # has an older SDK, so it builds with a lower deployment target).
   check-macos:
-    runs-on: macos-14
+    runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: Install build deps (Homebrew)
