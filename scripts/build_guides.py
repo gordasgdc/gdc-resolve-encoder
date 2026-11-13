@@ -94,7 +94,7 @@ L["ro"] = dict(
         ("8. Ce a fost verificat", [
             ("p", "Ediția 1.8.0 a fost verificată în DaVinci Resolve Studio 21.2 pe un Mac cu Apple Silicon, pe material de cameră de cinema, cu 17 exporturi (clipuri întregi și o secvență cu mai multe clipuri, cu sunet):"),
             ("ul", ["imagine: PSNR minim 40,6 dB față de sursă, cadre numărate corect;", "sunet: sincron (decalaj 0), eșantioane identice cu sursa, cu excepția fade-urilor de câteva milisecunde la marginea clipurilor;", "culoare: etichete scrise corect, HDR10 prezent în fișier;", "reimport în Resolve și redare în FFmpeg fără erori."]),
-            ("p", "Windows nu face parte din această ediție și nu a fost verificat."),
+            ("p", "Windows nu face parte din această ediție. Ediția Windows gratuită, fără activare, este v1.7.1 (întreținere); starea ei actuală este pe pagina produsului."),
         ]),
         ("9. Probleme frecvente", [
             ("ul", ["<b>Nu apar formatele GDC:</b> verifică că folosești DaVinci Resolve Studio și că ai repornit Resolve după instalare; verifică existența folderului de instalare de mai sus.", "<b>Lipsește o variantă hardware:</b> Mac-ul nu o poate rula; folosește varianta software.", "<b>Export eșuat:</b> în Resolve, Help → Create Diagnostics Log on Desktop; jurnalul conține motivul și setările de control al ratei folosite.", "<b>Anulare:</b> un export oprit lasă un fișier valid, trunchiat la ultimul cadru scris."]),
@@ -146,7 +146,7 @@ L["en"] = dict(
         ("8. What was verified", [
             ("p", "Edition 1.8.0 was verified in DaVinci Resolve Studio 21.2 on an Apple Silicon Mac, on cinema camera material, with 17 exports (full clips and a multi-clip sequence, with sound):"),
             ("ul", ["picture: minimum PSNR 40.6 dB against the source, frames counted correctly;", "sound: in sync (offset 0), samples identical to the source except for the few milliseconds of fade at clip edges;", "color: tags written correctly, HDR10 present in the file;", "reimport in Resolve and playback in FFmpeg without errors."]),
-            ("p", "Windows is not part of this edition and has not been verified."),
+            ("p", "Windows is not part of this edition. The free Windows edition, with no activation, is v1.7.1 (maintenance); its current status is on the product page."),
         ]),
         ("9. Common problems", [
             ("ul", ["<b>The GDC formats do not appear:</b> make sure you use DaVinci Resolve Studio and restarted Resolve after installing; check that the install folder above exists.", "<b>A hardware variant is missing:</b> your Mac cannot run it; use the software variant.", "<b>Failed export:</b> in Resolve, Help → Create Diagnostics Log on Desktop; the log holds the reason and the rate-control settings used.", "<b>Cancelling:</b> a stopped export leaves a valid file, truncated at the last written frame."]),
@@ -198,7 +198,7 @@ L["es"] = dict(
         ("8. Qué se verificó", [
             ("p", "La edición 1.8.0 se verificó en DaVinci Resolve Studio 21.2 en un Mac con Apple Silicon, con material de cámara de cine, en 17 exportaciones (clips completos y una secuencia de varios clips, con sonido):"),
             ("ul", ["imagen: PSNR mínimo de 40,6 dB frente al original, fotogramas contados correctamente;", "sonido: sincronizado (desfase 0), muestras idénticas al original salvo los pocos milisegundos de fundido en los bordes de los clips;", "color: etiquetas escritas correctamente, HDR10 presente en el archivo;", "reimportación en Resolve y reproducción en FFmpeg sin errores."]),
-            ("p", "Windows no forma parte de esta edición y no se ha verificado."),
+            ("p", "Windows no forma parte de esta edición. La edición gratuita para Windows, sin activación, es v1.7.1 (mantenimiento); su estado actual está en la página del producto."),
         ]),
         ("9. Problemas frecuentes", [
             ("ul", ["<b>No aparecen los formatos GDC:</b> comprueba que usas DaVinci Resolve Studio y que reiniciaste Resolve tras instalar; comprueba que existe la carpeta de instalación indicada arriba.", "<b>Falta una variante por hardware:</b> tu Mac no puede ejecutarla; usa la variante por software.", "<b>Exportación fallida:</b> en Resolve, Help → Create Diagnostics Log on Desktop; el registro contiene el motivo y los ajustes de control de tasa usados.", "<b>Cancelar:</b> una exportación detenida deja un archivo válido, truncado en el último fotograma escrito."]),
