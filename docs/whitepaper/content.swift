@@ -31,7 +31,7 @@ private func ch1() -> [Block] { [
         ["HDR", "HDR10 static: mastering display, MaxCLL, MaxFALL (în flux și, în formatele GDC, în container)"],
         ["Controale", "Preset, Profile, Level, Tune, CRF / bitrate / QP constant, interval de keyframe, parametri expert x264/x265"],
         ["Formate", "QuickTime, MP4 și MKV ale lui Resolve + GDC QuickTime, GDC MP4, GDC Matroska"],
-        ["Platforme", "macOS pe Apple Silicon (arm64), minim macOS 26 declarat de build, verificat pe macOS 27. Windows nu face parte din ediția 1.8.0."],
+        ["Platforme", "macOS pe Apple Silicon (arm64), minim macOS 26.0 declarat de build; proba efectivă pe macOS 27.0.1 cu DaVinci Resolve Studio 21.2. Windows nu face parte din ediția 1.8.0."],
         ["Dependențe", "Niciuna de instalat: FFmpeg și bibliotecile necesare sunt incluse în pachet"],
     ], widths: [0.24, 0.76]),
     .note(.info, "Acest document descrie ce face pluginul, cum funcționează și cum îl configurezi pentru destinații concrete. Capitolul 14 spune explicit ce a fost verificat în DaVinci Resolve și ce nu a fost încă testat."),

@@ -10,7 +10,7 @@ Sin cuenta, activación, periodo de prueba ni donación obligatoria: instalas y 
 
 ## Descarga
 
-Última versión: [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) · paquete macOS `GDCResolveEncoder-<versión>.pkg` (firmado y notarizado, Apple Silicon, macOS 26+ declarado por el build, verificado en macOS 27). Funciona solo con DaVinci Resolve Studio; la versión gratuita de Resolve no carga plugins de exportación.
+Última versión: [Releases](https://github.com/gordasgdc/gdc-resolve-encoder/releases/latest) · paquete macOS `GDCResolveEncoder-<versión>.pkg` (firmado y notarizado, Apple Silicon, mínimo macOS 26.0 declarado por el build; prueba efectiva: macOS 27.0.1 con DaVinci Resolve Studio 21.2). Funciona solo con DaVinci Resolve Studio; la versión gratuita de Resolve no carga plugins de exportación.
 
 1. Abre el `.pkg` con doble clic y sigue el instalador (pide la contraseña de tu Mac).
 2. Reinicia DaVinci Resolve.

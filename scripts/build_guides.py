@@ -64,7 +64,7 @@ L["ro"] = dict(
             ("p", "Ediția 1.8.0 pentru macOS este <b>gratuită și cu sursă deschisă</b>: nu cere cont, activare, perioadă de probă sau donație. Funcționează numai cu DaVinci Resolve Studio; versiunea gratuită Resolve nu încarcă pluginuri de export. Pluginul rulează local și nu trimite date nicăieri."),
         ]),
         ("2. Instalare", [
-            ("p", "Cerințe: macOS 26 sau mai nou (minim declarat; verificat pe macOS 27), Mac cu Apple Silicon, DaVinci Resolve Studio."),
+            ("p", "Cerințe: macOS 26.0 sau mai nou (minim declarat de build; proba efectivă: macOS 27.0.1 cu DaVinci Resolve Studio 21.2), Mac cu Apple Silicon, DaVinci Resolve Studio."),
             ("ul", ["Descarcă <b>GDCResolveEncoder-1.8.0.pkg</b> de pe pagina proiectului și deschide-l cu dublu-clic.", "Urmează pașii instalatorului (acceptă licența; cere parola Mac-ului tău).", "Repornește DaVinci Resolve. Nu e nevoie să instalezi altceva: FFmpeg și bibliotecile de codare vin în pachet."]),
             ("p", "Pachetul instalează în:"),
             ("code", PATH),
@@ -116,7 +116,7 @@ L["en"] = dict(
             ("p", "Edition 1.8.0 for macOS is <b>free and open source</b>: no account, activation, trial period or donation is required. It works only with DaVinci Resolve Studio; the free Resolve does not load export plugins. The plugin runs locally and sends no data anywhere."),
         ]),
         ("2. Installation", [
-            ("p", "Requirements: macOS 26 or later (declared minimum; verified on macOS 27), a Mac with Apple Silicon, DaVinci Resolve Studio."),
+            ("p", "Requirements: macOS 26.0 or later (minimum declared by the build; actually tested on macOS 27.0.1 with DaVinci Resolve Studio 21.2), a Mac with Apple Silicon, DaVinci Resolve Studio."),
             ("ul", ["Download <b>GDCResolveEncoder-1.8.0.pkg</b> from the project page and double-click it.", "Follow the installer (accept the license; it asks for your Mac password).", "Restart DaVinci Resolve. Nothing else needs installing: FFmpeg and the encoding libraries ship inside the package."]),
             ("p", "The package installs to:"),
             ("code", PATH),
@@ -168,7 +168,7 @@ L["es"] = dict(
             ("p", "La edición 1.8.0 para macOS es <b>gratuita y de código abierto</b>: no pide cuenta, activación, periodo de prueba ni donación. Funciona solo con DaVinci Resolve Studio; la versión gratuita de Resolve no carga plugins de exportación. El plugin se ejecuta en local y no envía datos a ninguna parte."),
         ]),
         ("2. Instalación", [
-            ("p", "Requisitos: macOS 26 o posterior (mínimo declarado; verificado en macOS 27), Mac con Apple Silicon, DaVinci Resolve Studio."),
+            ("p", "Requisitos: macOS 26.0 o posterior (mínimo declarado por el build; prueba efectiva: macOS 27.0.1 con DaVinci Resolve Studio 21.2), Mac con Apple Silicon, DaVinci Resolve Studio."),
             ("ul", ["Descarga <b>GDCResolveEncoder-1.8.0.pkg</b> desde la página del proyecto y ábrelo con doble clic.", "Sigue el instalador (acepta la licencia; pide la contraseña de tu Mac).", "Reinicia DaVinci Resolve. No hace falta instalar nada más: FFmpeg y las bibliotecas de codificación vienen en el paquete."]),
             ("p", "El paquete se instala en:"),
             ("code", PATH),

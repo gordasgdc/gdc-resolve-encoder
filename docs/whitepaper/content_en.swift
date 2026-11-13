@@ -29,7 +29,7 @@ private func en1() -> [Block] { [
         ["HDR", "Static HDR10: mastering display, MaxCLL, MaxFALL (in the stream and, in the GDC formats, in the container)"],
         ["Controls", "Preset, Profile, Level, Tune, CRF / bitrate / constant QP, keyframe interval, expert x264/x265 parameters"],
         ["Formats", "Resolve's QuickTime, MP4 and MKV + GDC QuickTime, GDC MP4, GDC Matroska"],
-        ["Platforms", "macOS on Apple Silicon (arm64), minimum macOS 26 declared by the build, verified on macOS 27. Windows is not part of edition 1.8.0."],
+        ["Platforms", "macOS on Apple Silicon (arm64), minimum macOS 26.0 declared by the build; actually tested on macOS 27.0.1 with DaVinci Resolve Studio 21.2. Windows is not part of edition 1.8.0."],
         ["Dependencies", "Nothing to install: FFmpeg and the required libraries ship inside the package"],
     ], widths: [0.24, 0.76]),
     .note(.info, "This document describes what the plugin does, how it works and how to configure it for concrete destinations. Chapter 14 states explicitly what has been verified in DaVinci Resolve and what has not been tested yet."),
